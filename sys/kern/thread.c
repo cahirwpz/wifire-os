@@ -22,6 +22,18 @@ static mtx_t *threads_lock = &MTX_INITIALIZER(0);
 static thread_list_t all_threads = TAILQ_HEAD_INITIALIZER(all_threads);
 static thread_list_t zombie_threads = TAILQ_HEAD_INITIALIZER(zombie_threads);
 
+extern spin_t sched_lock;
+
+spin_t *thread_lock_set(thread_t *td, spin_t *new) {
+  spin_t *old;
+  assert(spin_owned(new));
+  old = td->td_lock;
+  assert(spin_owned(old));
+  td->td_lock = new;
+  spin_unlock(old);
+  return old;
+}
+
 /* FTTB such a primitive method of creating new TIDs will do. */
 static tid_t make_tid(void) {
   static volatile tid_t tid = 1;
@@ -83,8 +95,7 @@ thread_t *thread_create(const char *name, void (*fn)(void *), void *arg,
   td->td_prio = prio;
   td->td_base_prio = prio;
 
-  td->td_lock = kmalloc(M_TEMP, sizeof(spin_t), M_ZERO);
-  spin_init(td->td_lock, 0);
+  td->td_lock = &sched_lock;
 
   cv_init(&td->td_waitcv, "thread waiters");
   LIST_INIT(&td->td_contested);
@@ -123,7 +134,6 @@ void thread_delete(thread_t *td) {
   sleepq_destroy(td->td_sleepqueue);
   turnstile_destroy(td->td_turnstile);
   kfree(M_STR, td->td_name);
-  kfree(M_TEMP, td->td_lock);
   pool_free(P_THREAD, td);
 }
 
@@ -159,8 +169,9 @@ __noreturn void thread_exit(void) {
     TAILQ_INSERT_TAIL(&zombie_threads, td, td_zombieq);
   }
 
-  cv_broadcast(&td->td_waitcv);
   spin_unlock(td->td_lock);
+
+  cv_broadcast(&td->td_waitcv);
 
   spin_lock(td->td_lock);
   td->td_state = TDS_DEAD;

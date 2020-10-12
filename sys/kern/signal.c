@@ -231,19 +231,19 @@ void sig_kill(proc_t *p, signo_t sig) {
         if (td_is_stopped(td))
           sched_wakeup(td, 0);
   } else {
-    WITH_SPIN_LOCK (td->td_lock) {
-      td->td_flags |= TDF_NEEDSIGCHK;
-      /* If the thread is sleeping interruptibly (!), wake it up, so that it
-       * continues execution and the signal gets delivered soon. */
-      if (td_is_interruptible(td)) {
-        /* XXX Maybe TDF_NEEDSIGCHK should be protected by a different lock? */
-        spin_unlock(td->td_lock);
-        sleepq_abort(td); /* Locks & unlocks td_lock */
-        spin_lock(td->td_lock);
-      } else if (td_is_stopped(td) && continued) {
-        sched_wakeup(td, 0);
-      }
+    spin_lock(td->td_lock);
+    td->td_flags |= TDF_NEEDSIGCHK;
+    /* If the thread is sleeping interruptibly (!), wake it up, so that it
+     * continues execution and the signal gets delivered soon. */
+    if (td_is_interruptible(td)) {
+      /* XXX Maybe TDF_NEEDSIGCHK should be protected by a different lock? */
+      spin_unlock(td->td_lock);
+      sleepq_abort(td); /* Locks & unlocks td_lock */
+      return;
     }
+    if (td_is_stopped(td) && continued)
+      sched_wakeup(td, 0);
+    spin_unlock(td->td_lock);
   }
 }
 

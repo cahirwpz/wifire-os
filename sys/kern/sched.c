@@ -11,7 +11,7 @@
 #include <sys/pcpu.h>
 #include <sys/turnstile.h>
 
-static spin_t sched_lock = SPIN_INITIALIZER(0);
+spin_t sched_lock = SPIN_INITIALIZER(0);
 static runq_t runq;
 static bool sched_active = false;
 

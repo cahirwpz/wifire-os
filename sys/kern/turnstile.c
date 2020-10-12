@@ -131,7 +131,8 @@ static thread_t *acquire_owner(turnstile_t *ts) {
   assert(ts->ts_state == USED_BLOCKED);
   thread_t *td = ts->ts_owner;
   assert(td != NULL); /* Turnstile must have an owner. */
-  spin_lock(td->td_lock);
+  if (!spin_owned(td->td_lock))
+    spin_lock(td->td_lock);
   assert(!td_is_sleeping(td)); /* You must not sleep while holding a mutex. */
   return td;
 }
@@ -170,7 +171,7 @@ static void propagate_priority(thread_t *td) {
     assert(td->td_blocked == NULL);
   }
 
-  spin_unlock(td->td_lock);
+  // spin_unlock(td->td_lock);
 }
 
 void turnstile_adjust(thread_t *td, prio_t oldprio) {
