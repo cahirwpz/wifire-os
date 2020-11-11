@@ -4,6 +4,7 @@
 #include <sys/libkern.h>
 #include <sys/timer.h>
 #include <sys/mutex.h>
+#include <sys/sched.h>
 #include <sys/errno.h>
 
 static mtx_t timers_mtx = MTX_INITIALIZER(0);
@@ -168,6 +169,51 @@ void tm_trigger(timer_t *tm) {
 
 void tm_select(timer_t *tm) {
   time_source = tm;
+}
+
+void tm_calibrate(void) {
+  assert(time_source != NULL);
+
+  if (time_source->tm_flags & TMF_STABLE)
+    return;
+
+  timer_t *tuner = tm_reserve(NULL, TMF_STABLE);
+  if (tuner == NULL)
+    return;
+
+  bintime_t diff;
+
+  WITH_NO_PREEMPTION {
+    bintime_t start, curr, curr2;
+    bintime_t begin, end;
+
+    start = tm_gettime(tuner);
+    do {
+      curr = tm_gettime(tuner);
+    } while (start.sec == curr.sec);
+
+    begin = tm_gettime(time_source);
+
+    start = curr;
+    do {
+      curr2 = tm_gettime(tuner);
+    } while (start.sec == curr2.sec);
+
+    end = tm_gettime(time_source);
+
+    assert(bintime_cmp(&end, &begin, >));
+    diff = end;
+    bintime_sub(&diff, &begin);
+  }
+
+  /* `diff` is numer of seconds measured by timer_source in real-time 1s */
+  (void)diff;
+#if 0
+  time_source->tm_frequency =
+    bintime_mul(diff, time_source->tm_frequency).sec;
+#endif
+
+  tm_release(tuner);
 }
 
 bintime_t binuptime(void) {

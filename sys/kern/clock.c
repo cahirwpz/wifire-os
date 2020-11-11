@@ -28,4 +28,6 @@ void init_clock(void) {
                HZ2BT(CLK_TCK)))
     panic("Failed to start system clock!");
   klog("System clock uses \'%s\' hardware timer.", clock->tm_name);
+
+  tm_calibrate();
 }

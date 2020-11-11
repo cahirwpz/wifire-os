@@ -24,8 +24,9 @@ typedef void (*tm_event_cb_t)(timer_t *tm, void *arg);
 /* There are some flags used by implementation that are not listed here! */
 #define TMF_ONESHOT 0x0001    /*!< triggers callback once */
 #define TMF_PERIODIC 0x0002   /*!< triggers callback on regular basis */
-#define TMF_TYPEMASK 0x0003   /*!< don't use other bits! */
-#define TMF_TIMESOURCE 0x0004 /*!< choose this timer as time source */
+#define TMF_STABLE 0x0004     /*!< run with fixed frequency */
+#define TMF_TYPEMASK 0x0007   /*!< don't use other bits! */
+#define TMF_TIMESOURCE 0x0008 /*!< choose this timer as time source */
 
 typedef struct timer {
   TAILQ_ENTRY(timer) tm_link; /*!< entry on list of all timers */
@@ -41,6 +42,10 @@ typedef struct timer {
   void *tm_arg;               /*!< an argument for callback */
   void *tm_priv;              /*!< private data (usually device_t *) */
 } timer_t;
+
+static inline bintime_t tm_gettime(timer_t *tm) {
+  return tm->tm_gettime(tm);
+}
 
 /*! \brief  Used to set/change the system boottime */
 void tm_setclock(const bintime_t *bt);
@@ -70,5 +75,8 @@ void tm_trigger(timer_t *tm);
 
 /*! \brief Select timer used as a main time source (for binuptime, etc.) */
 void tm_select(timer_t *tm);
+
+/*! \brief TODO !!! */
+void tm_calibrate(void);
 
 #endif /* !_SYS_TIMER_H_ */

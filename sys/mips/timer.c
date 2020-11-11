@@ -111,7 +111,7 @@ static int mips_timer_stop(timer_t *tm) {
 
 static bintime_t mips_timer_gettime(timer_t *tm) {
   uint64_t count = read_count(state_of(tm));
-  uint32_t sec = count / tm->tm_frequency;
+  uint64_t sec = count / tm->tm_frequency;
   uint32_t frac = count % tm->tm_frequency;
   bintime_t bt = bintime_mul(HZ2BT(tm->tm_frequency), frac);
   bt.sec += sec;

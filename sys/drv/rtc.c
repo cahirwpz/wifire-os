@@ -27,6 +27,7 @@ typedef struct rtc_state {
   char asctime[RTC_ASCTIME_SIZE];
   unsigned counter; /* TODO Should that be part of intr_handler_t ? */
   intr_handler_t intr_handler;
+  timer_t timer;
 } rtc_state_t;
 
 /*
@@ -96,6 +97,15 @@ static int rtc_time_read(vnode_t *v, uio_t *uio, int ioflag) {
 static vnodeops_t rtc_time_vnodeops = {.v_open = vnode_open_generic,
                                        .v_read = rtc_time_read};
 
+static bintime_t mc146818_gettime(timer_t *tm) {
+  device_t *dev = tm->tm_priv;
+  rtc_state_t *rtc = dev->state;
+
+  tm_t t;
+  rtc_gettime(rtc->regs, &t);
+  return BINTIME(tm2sec(&t));
+}
+
 static int rtc_attach(device_t *dev) {
   assert(dev->parent->bus == DEV_BUS_PCI);
 
@@ -122,9 +132,22 @@ static int rtc_attach(device_t *dev) {
   devfs_makedev(NULL, "rtc", &rtc_time_vnodeops, rtc);
 
   tm_t t;
-
   rtc_gettime(rtc->regs, &t);
   boottime_init(&t);
+
+  rtc->timer = (timer_t){
+    .tm_name = "MC146818 RTC",
+    .tm_flags = TMF_STABLE,
+    .tm_frequency = 1,
+    .tm_min_period = HZ2BT(32768), /* MC_RATE_1 */
+    .tm_max_period = HZ2BT(2),     /* MC_RATE_2_Hz */
+    .tm_start = NULL,
+    .tm_stop = NULL,
+    .tm_gettime = mc146818_gettime,
+    .tm_priv = dev,
+  };
+
+  tm_register(&rtc->timer);
 
   return 0;
 }
