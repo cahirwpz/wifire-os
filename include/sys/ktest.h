@@ -49,6 +49,7 @@ __noreturn void ktest_main(const char *test);
  * script running the kernel may want to grep for them. */
 #define TEST_PASSED_STRING "[TEST PASSED]\n"
 #define TEST_FAILED_STRING "[TEST FAILED]\n"
+#define TEST_TIMEOUT_STRING "[TEST TIMEOUT]\n"
 
 /* This function is called both by run_test, as well as ktest_assert.
  * It displays some troubleshooting info about the failing test. */

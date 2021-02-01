@@ -10,7 +10,7 @@ from launcher import RandomPort, getvar, setvar, setboard
 
 
 N_SIMPLE = 10
-TIMEOUT = 40
+TIMEOUT = 60
 RETRIES_MAX = 5
 REPEAT = 5
 
@@ -76,12 +76,12 @@ def test_seed(seed, interactive=True, repeat=1, retry=0):
                            '-t', 'test=all', 'klog-quiet=1',
                            'seed=%u' % seed, 'repeat=%d' % repeat])
     index = child.expect_exact(
-        ['[TEST PASSED]', '[TEST FAILED]', '[PANIC]', pexpect.EOF,
-         pexpect.TIMEOUT], timeout=TIMEOUT)
+        ['[TEST PASSED]', '[TEST FAILED]', '[PANIC]', '[TEST TIMEOUT]',
+         pexpect.EOF, pexpect.TIMEOUT], timeout=TIMEOUT)
     if index == 0:
         child.terminate(True)
         return
-    elif index in [1, 2]:
+    elif index in [1, 2, 3]:
         print("Test failure reported!\n")
         message = safe_decode(child.before)
         message += safe_decode(child.buffer)
@@ -93,7 +93,7 @@ def test_seed(seed, interactive=True, repeat=1, retry=0):
         print(message)
         gdb_inspect(interactive)
         sys.exit(1)
-    elif index == 3:
+    elif index == 4:
         message = safe_decode(child.before)
         message += safe_decode(child.buffer)
         print(message)
@@ -101,7 +101,7 @@ def test_seed(seed, interactive=True, repeat=1, retry=0):
               "a problem with the testing framework or QEMU. "
               "Retrying (%d)..." % (retry + 1))
         test_seed(seed, interactive, repeat, retry + 1)
-    elif index == 4:
+    elif index == 5:
         print("Timeout reached!\n")
         message = safe_decode(child.buffer)
         print(message)

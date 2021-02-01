@@ -4,6 +4,8 @@
 #include <sys/malloc.h>
 #include <sys/libkern.h>
 #include <sys/interrupt.h>
+#include <sys/time.h>
+#include <sys/callout.h>
 
 #define KTEST_MAX_NO 1024
 #define KTEST_FAIL(args...)                                                    \
@@ -18,6 +20,8 @@ SET_DECLARE(tests, test_entry_t);
 static test_entry_t *current_test = NULL;
 /* A null-terminated array of pointers to the tested test list. */
 static test_entry_t *autorun_tests[KTEST_MAX_NO] = {NULL};
+/* Callout used to detect test timeout. */
+static callout_t ktest_callout;
 /* Memory pool used by tests. */
 KMALLOC_DEFINE(M_TEST, "test framework");
 
@@ -41,18 +45,18 @@ static void ktest_atomically_print_failure(void) {
   kprintf(TEST_FAILED_STRING);
 }
 
-static __noreturn void ktest_failure(void) {
-  if (current_test == NULL)
-    panic("current_test == NULL in ktest_failure! This is most likely a bug in "
-          "the test framework!\n");
-  ktest_atomically_print_failure();
+static __noreturn void
+ktest_print_failure_info_and_panic(bool timeout, test_entry_t *failed_test) {
+  SCOPED_INTR_DISABLED();
+  kprintf(timeout ? TEST_TIMEOUT_STRING : TEST_FAILED_STRING);
   if (autorun_tests[0]) {
-    kprintf("Failure while running multiple tests.\n");
+    kprintf("%s while running multiple tests.\n",
+            timeout ? "Timeout" : "Failure");
     for (test_entry_t **ptr = autorun_tests; *ptr != NULL; ptr++) {
       test_entry_t *t = *ptr;
       kprintf("  %s", t->test_name);
-      if (t == current_test) {
-        kprintf("  <---- FAILED\n");
+      if (t == failed_test) {
+        kprintf("  <---- %s\n", timeout ? "TIMEOUT" : "FAILED");
         break;
       } else {
         kprintf("\n");
@@ -62,10 +66,17 @@ static __noreturn void ktest_failure(void) {
             "`test=all seed=%u repeat=%u` to reproduce this test case.\n",
             ktest_seed, ktest_seed, ktest_repeat);
   } else {
-    kprintf("Failure while running single test.\n");
-    kprintf("Failing test: %s\n", current_test->test_name);
+    kprintf("%s while running single test: \"%s\"\n",
+            timeout ? "Timeout" : "Failure", failed_test->test_name);
   }
-  panic("Halting kernel on failed test.\n");
+  panic("Halting kernel on %s test.\n", timeout ? "timed out" : "failed");
+}
+
+static __noreturn void ktest_failure(void) {
+  if (current_test == NULL)
+    panic("current_test == NULL in ktest_failure! This is most likely a bug in "
+          "the test framework!\n");
+  ktest_print_failure_info_and_panic(false, current_test);
 }
 
 void ktest_failure_hook(void) {
@@ -88,6 +99,27 @@ static __unused test_entry_t *find_test_by_name(const char *test) {
   return find_test_by_name_with_len(test, strlen(test));
 }
 
+/* The time limit for a single test in clock ticks. */
+#define KTEST_SINGLE_TEST_TIMEOUT (5 * CLK_TCK) /* 5 seconds */
+
+static void ktest_timeout(void *arg) {
+  ktest_print_failure_info_and_panic(true, arg);
+}
+
+static void ktest_setup_callout(test_entry_t *t) {
+  callout_setup_relative(&ktest_callout, KTEST_SINGLE_TEST_TIMEOUT,
+                         ktest_timeout, t);
+}
+
+static void ktest_stop_callout(void) {
+  if (!callout_stop(&ktest_callout)) {
+    /* The callout has been dispatched to the callout thread, so the only thing
+     * we can do is wait for it to panic. */
+    while (true)
+      ;
+  }
+}
+
 typedef int (*test_func_t)(unsigned);
 
 /* If the test fails, run_test will not return. */
@@ -106,23 +138,24 @@ static int run_test(test_entry_t *t) {
 
   current_test = t;
 
-  int result;
+  int result, randint = 0;
+  test_func_t f = (void *)t->test_func;
   if (t->flags & KTEST_FLAG_RANDINT) {
-    test_func_t f = (void *)t->test_func;
-    int randint = rand_r(&seed) % t->randint_max;
+    randint = rand_r(&seed) % t->randint_max;
     /* NOTE: Numbers generated here will be the same on each run, since test are
        started in a deterministic order. This is not a bug! In fact, it allows
        to reproduce test cases easily, just by reusing the seed.*/
     /* TODO: Low discrepancy sampling? */
-
-    ktest_test_running_flag = 1;
-    result = f(randint);
-    ktest_test_running_flag = 0;
-  } else {
-    ktest_test_running_flag = 1;
-    result = t->test_func();
-    ktest_test_running_flag = 0;
   }
+
+  ktest_setup_callout(t);
+  ktest_test_running_flag = 1;
+  /* If the test function doesn't take a randint argument,
+   * it will just ignore it. */
+  result = f(randint);
+  ktest_test_running_flag = 0;
+  ktest_stop_callout();
+
   if (result == KTEST_FAILURE)
     ktest_failure();
 
