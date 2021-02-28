@@ -16,6 +16,7 @@
  * Interrupt status register bits.
  */
 #define RL_ISR_RX_OK 0x0001
+#define RL_ISR_TX_OK 0x0004
 
 /*
  * Command register.
@@ -29,6 +30,7 @@
  */
 #define RL_CFG1_PWRON 0x00 /* power on */
 
+#define RL_RXBUFLEN 0x2000
 /* we want to receive all packets - promiscious mode
  * 0xf - accept broadcast, multicast, physical match, all other packets
  * (promisc) */

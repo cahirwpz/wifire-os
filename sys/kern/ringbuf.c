@@ -28,6 +28,24 @@ static void consume(ringbuf_t *buf, unsigned bytes) {
     buf->tail = 0;
 }
 
+/* below two function are to help track ringbuf pointers in case when it is
+ * changed by something else. e.q. DMA */
+void ringbuf_produce(ringbuf_t *buf, unsigned bytes) {
+  buf->count += bytes;
+  buf->head += bytes;
+  buf->head %= buf->size;
+  if (buf->count > buf->size)
+    buf->count = buf->size;
+}
+
+void ringbuf_consume(ringbuf_t *buf, unsigned bytes) {
+  buf->count -= bytes;
+  buf->tail += bytes;
+  buf->tail %= buf->size;
+  if (buf->count > buf->size)
+    buf->count = 0;
+}
+
 bool ringbuf_putb(ringbuf_t *buf, uint8_t byte) {
   if (buf->count == buf->size)
     return false;
@@ -57,6 +75,42 @@ bool ringbuf_getnb(ringbuf_t *buf, uint8_t *data, size_t n) {
     return false;
   for (size_t i = 0; i < n; i++)
     ringbuf_getb(buf, &data[i]);
+  return true;
+}
+
+bool ringbuf_moveb(ringbuf_t *src, ringbuf_t *dst) {
+  uint8_t byte;
+  if (src->count == 0 || dst->count == dst->size)
+    return false;
+  ringbuf_getb(src, &byte);
+  ringbuf_putb(dst, byte);
+  return true;
+}
+
+bool ringbuf_movenb(ringbuf_t *src, ringbuf_t *dst, size_t n) {
+  if (src->count < n || dst->count + n > dst->size)
+    return false;
+  for (size_t i = 0; i < n; i++)
+    ringbuf_moveb(src, dst);
+  return true;
+}
+
+bool ringbuf_restoreb(ringbuf_t *buf) {
+  if (buf->count == buf->size)
+    return false;
+  if (buf->tail == 0)
+    buf->tail = buf->size - 1;
+  else
+    buf->tail--;
+  buf->count++;
+  return true;
+}
+
+bool ringbuf_restorenb(ringbuf_t *buf, size_t n) {
+  if (buf->count + n > buf->size)
+    return false;
+  for (size_t i = 0; i < n; i++)
+    ringbuf_restoreb(buf);
   return true;
 }
 
