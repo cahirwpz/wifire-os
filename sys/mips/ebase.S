@@ -381,6 +381,7 @@ user_return:
 END(user_exc_enter)
 
 SNESTED(kern_exc_enter, CTX_SIZE, ra)
+        .cfi_signal_frame
         # Fetch PCPU address
         LOAD_PCPU_KSEG0(k0)
 
@@ -391,6 +392,28 @@ SNESTED(kern_exc_enter, CTX_SIZE, ra)
         PCPU_SAVE(EPC)
         PCPU_SAVE(BADVADDR)
 
+        # If the exception is a TLB load/store exception (exc. code 2 or 3),
+        # check for kernel stack overflow.
+        mfc0 k1, C0_CAUSE
+        # Extract exc. code, discarding least significant bit.
+        ext k1, k1, CR_X_SHIFT+1, CR_X_BITS
+        subu k1, 1
+        # k1 is 0 now iff exc. code was 2 or 3.
+        bnez k1, skip_overflow_check
+        nop
+        # Check if badvaddr is in the page preceding the kernel stack
+        lw k1, PCPU_CURTHREAD(k0)
+        lw k1, (TD_KSTACK+STK_BASE)(k1)
+        srl k1, PAGE_SHIFT
+        subu k1, 1
+        mfc0 k0, C0_BADVADDR
+        srl k0, PAGE_SHIFT
+        bne k0, k1, skip_overflow_check
+        nop
+        # Kernel stack overflow detected: switch to panic stack
+        LOAD_PCPU_KSEG0(k0)
+        lw sp, PCPU_PANIC_SP(k0)
+skip_overflow_check:
         # Allocate stack frame (of CTX_SIZE bytes) and save context.
         subu    sp, CTX_SIZE # required by gdb to recognize frame
         .cfi_def_cfa sp, 0

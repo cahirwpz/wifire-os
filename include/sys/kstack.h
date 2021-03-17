@@ -2,7 +2,11 @@
 #define _SYS_KSTACK_H_
 
 #include <sys/cdefs.h>
+#include <sys/types.h>
+#include <sys/klog.h>
+#include <sys/kmem.h>
 #include <machine/abi.h>
+#include <machine/vm_param.h>
 
 /*! \brief Thread stack structure. */
 typedef struct kstack {
@@ -20,11 +24,22 @@ static inline void kstack_reset(kstack_t *stk) {
   stk->stk_ptr = stk->stk_base + stk->stk_size;
 }
 
-/*! \brief Initialize stack structure with memory. */
-static inline void kstack_init(kstack_t *stk, void *ptr, size_t size) {
-  stk->stk_base = ptr;
-  stk->stk_size = size;
+/*! \brief Initialize stack structure. */
+static inline void kstack_init(kstack_t *stk) {
+  vaddr_t va = kva_alloc(2 * PAGESIZE);
+  assert(va);
+  vaddr_t base = va + PAGESIZE;
+  /* Assume stack grows down. */
+  kva_map(base, PAGESIZE, 0);
+  /* Leave guard page unmapped. */
+  stk->stk_base = (void *)base;
+  stk->stk_size = PAGESIZE;
   kstack_reset(stk);
+}
+
+static inline void kstack_destroy(kstack_t *stk) {
+  kva_unmap((vaddr_t)stk->stk_base, PAGESIZE);
+  kva_free((vaddr_t)stk->stk_base - PAGESIZE, 2 * PAGESIZE);
 }
 
 /*! \brief Allocate n bytes on stack. */

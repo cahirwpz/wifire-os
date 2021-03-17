@@ -10,6 +10,7 @@
 #include <sys/thread.h>
 #include <sys/vm_map.h>
 #include <sys/vm_physmem.h>
+#include <sys/pcpu.h>
 
 static inline unsigned exc_code(ctx_t *ctx) {
   return (_REG(ctx, CAUSE) & CR_X_MASK) >> CR_X_SHIFT;
@@ -258,12 +259,10 @@ void mips_exc_handler(ctx_t *ctx) {
   bool user_mode = user_mode_p(ctx);
 
   if (!user_mode) {
-    /* If there's not enough space on the stack to store another exception
-     * frame we consider situation to be critical and panic.
-     * Hopefully sizeof(ctx_t) bytes of unallocated stack space will be enough
-     * to display error message. */
-    register_t sp = mips32_get_sp();
-    if ((sp & (PAGESIZE - 1)) < sizeof(ctx_t))
+    /* If we're on the panic stack, a stack overflow has been detected. */
+    void *sp = (void *)mips32_get_sp();
+    void *panic_sp = PCPU_GET(panic_sp);
+    if (sp >= panic_sp - PAGESIZE && sp <= panic_sp)
       panic("Kernel stack overflow caught at $%08lx!", _REG(ctx, EPC));
   }
 

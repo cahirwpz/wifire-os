@@ -16,6 +16,7 @@ typedef struct pcpu {
   thread_t *idle_thread; /*!< idle thread executed on this CPU */
   pmap_t *curpmap;       /*!< current page table */
   vm_map_t *uspace;      /*!< user space virtual memory map */
+  void *panic_sp;        /*!< stack to handle kernel stack overflows */
 
   /* Machine-dependent part */
   PCPU_MD_FIELDS;

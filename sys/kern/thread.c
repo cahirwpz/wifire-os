@@ -92,7 +92,7 @@ thread_t *thread_create(const char *name, void (*fn)(void *), void *arg,
   bzero(&td->td_slpcallout, sizeof(callout_t));
 
   td->td_name = kstrndup(M_STR, name, TD_NAME_MAX);
-  kstack_init(&td->td_kstack, kmem_alloc(PAGESIZE, M_ZERO), PAGESIZE);
+  kstack_init(&td->td_kstack);
 
   td->td_sleepqueue = sleepq_alloc();
   td->td_turnstile = turnstile_alloc();
@@ -120,7 +120,7 @@ void thread_delete(thread_t *td) {
   WITH_MTX_LOCK (&threads_lock)
     TAILQ_REMOVE(&all_threads, td, td_all);
 
-  kmem_free(td->td_kstack.stk_base, PAGESIZE);
+  kstack_destroy(&td->td_kstack);
 
   callout_drain(&td->td_slpcallout);
   sleepq_destroy(td->td_sleepqueue);

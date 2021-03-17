@@ -11,6 +11,7 @@
 #define USER_STACK_SIZE 0x800000 /* grows down up to that size limit */
 
 #define PAGESIZE 4096
+#define PAGE_SHIFT 12
 #define SUPERPAGESIZE (1 << 22) /* 4 MB */
 
 #define VM_PHYSSEG_NMAX 16
