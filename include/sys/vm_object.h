@@ -28,5 +28,7 @@ void vm_object_remove_pages(vm_object_t *obj, vm_offset_t off, size_t len);
 vm_page_t *vm_object_find_page(vm_object_t *obj, vm_offset_t off);
 vm_object_t *vm_object_clone(vm_object_t *obj);
 void vm_map_object_dump(vm_object_t *obj);
+void vm_object_protect(vm_object_t *obj, vaddr_t start, vaddr_t end,
+                       vm_prot_t prot);
 
 #endif /* !_SYS_VM_OBJECT_H_ */

@@ -67,5 +67,6 @@ struct vm_page {
 
 int do_mmap(vaddr_t *addr_p, size_t length, int u_prot, int u_flags);
 int do_munmap(vaddr_t addr, size_t length);
+int do_mprotect(vaddr_t addr, size_t length, vm_prot_t prot);
 
 #endif /* !_SYS_VM_H_ */

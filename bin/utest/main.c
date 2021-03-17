@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
      like an overkill to me. */
   CHECKRUN_TEST(mmap);
   CHECKRUN_TEST(munmap_sigsegv);
+  CHECKRUN_TEST(mprotect);
   CHECKRUN_TEST(mmap_prot_none);
   CHECKRUN_TEST(mmap_prot_read);
   CHECKRUN_TEST(sbrk);

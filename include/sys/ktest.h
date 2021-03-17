@@ -28,7 +28,7 @@ typedef enum test_flag {
 } test_flag_t;
 
 typedef struct {
-  const char test_name[KTEST_NAME_MAX];
+  const char *test_name;
   int (*test_func)(void);
   test_flag_t flags;
   uint32_t randint_max;

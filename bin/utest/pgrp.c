@@ -204,7 +204,6 @@ int test_killpg_other_group(void) {
 
     pid_t pid_b = fork();
     if (pid_b == 0) {
-
       pid_t pid_c = fork();
       if (pid_c == 0) {
 

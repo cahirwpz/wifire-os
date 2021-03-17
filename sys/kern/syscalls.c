@@ -188,7 +188,9 @@ static int sys_munmap(proc_t *p, munmap_args_t *args, register_t *res) {
 static int sys_mprotect(proc_t *p, mprotect_args_t *args, register_t *res) {
   klog("mprotect(%p, %u, %u)", SCARG(args, addr), SCARG(args, len),
        SCARG(args, prot));
-  return ENOTSUP;
+
+  return do_mprotect((vaddr_t)SCARG(args, addr), SCARG(args, len),
+                     SCARG(args, prot));
 }
 
 static int sys_openat(proc_t *p, openat_args_t *args, register_t *res) {

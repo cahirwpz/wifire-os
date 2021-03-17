@@ -83,3 +83,25 @@ int do_munmap(vaddr_t addr, size_t length) {
   }
   return 0;
 }
+
+int do_mprotect(vaddr_t addr, size_t length, vm_prot_t prot) {
+  thread_t *td = thread_self();
+  assert(td && td->td_proc && td->td_proc->p_uspace);
+
+  vm_map_t *uspace = td->td_proc->p_uspace;
+
+  if (!page_aligned_p(addr) || !page_aligned_p(length))
+    return EINVAL;
+
+  vaddr_t right_boundary = addr + length;
+  WITH_VM_MAP_LOCK (uspace) {
+    /* addresses in range [addr, addr + length) are invalid for the address
+     * space of the process */
+    if (!vm_map_contains_p(uspace, addr, right_boundary))
+      return ENOMEM;
+  }
+
+  vm_map_protect(uspace, addr, right_boundary, prot);
+
+  return 0;
+}
