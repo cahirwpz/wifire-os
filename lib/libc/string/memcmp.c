@@ -41,7 +41,7 @@
 /*
  * Compare memory regions.
  */
-int memcmp(const void *s1, const void *s2, size_t n) {
+__no_address_sanitize int memcmp(const void *s1, const void *s2, size_t n) {
   if (n != 0) {
     const unsigned char *p1 = s1, *p2 = s2;
 

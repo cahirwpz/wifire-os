@@ -73,6 +73,7 @@
 #define __long_call
 #endif
 #define __transparent_union __attribute__((__transparent_union__))
+#define __no_address_sanitize __attribute__((no_sanitize("address")))
 #define __no_sanitize                                                          \
   __attribute__((no_sanitize("address", "thread", "undefined")))
 

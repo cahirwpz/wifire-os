@@ -41,7 +41,7 @@
 /*
  * Compare strings.
  */
-int strcmp(const char *s1, const char *s2) {
+__no_address_sanitize int strcmp(const char *s1, const char *s2) {
   while (*s1 == *s2++)
     if (*s1++ == 0)
       return (0);

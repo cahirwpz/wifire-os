@@ -53,13 +53,13 @@
 #define VAL 0
 #define WIDEVAL 0
 
-void bzero(void *dst0, size_t length)
+__no_address_sanitize void bzero(void *dst0, size_t length)
 #else
 #define RETURN return (dst0)
 #define VAL c0
 #define WIDEVAL c
 
-void *memset(void *dst0, int c0, size_t length)
+__no_address_sanitize void *memset(void *dst0, int c0, size_t length)
 #endif
 {
   size_t t;
