@@ -259,18 +259,45 @@ int vm_map_findspace(vm_map_t *map, vaddr_t *start_p, size_t length) {
   return vm_map_findspace_nolock(map, start_p, length, NULL);
 }
 
+static int vm_map_preparespace_nolock(vm_map_t *map, vaddr_t start,
+                                      size_t length) {
+  assert(page_aligned_p(start) && page_aligned_p(length));
+
+  if (!vm_map_contains_p(map, start, start + length))
+    return ENOMEM;
+
+  vm_segment_t *seg, *next;
+  TAILQ_FOREACH_SAFE (seg, &map->entries, link, next) {
+    if ((start <= seg->start && seg->start < start + length) ||
+        (start < seg->end && seg->end < start + length)) {
+      vm_segment_destroy(map, seg);
+    }
+  }
+
+  return 0;
+}
+
 int vm_map_insert(vm_map_t *map, vm_segment_t *seg, vm_flags_t flags) {
   SCOPED_MTX_LOCK(&map->mtx);
   vm_segment_t *after;
   vaddr_t start = seg->start;
   size_t length = seg->end - seg->start;
   vm_seg_flags_t seg_flags = 0;
+  int error;
 
-  int error = vm_map_findspace_nolock(map, &start, length, &after);
+  if (flags & VM_FIXED) {
+    error = vm_map_preparespace_nolock(map, start, length);
+
+    if (error)
+      return error;
+  }
+
+  error = vm_map_findspace_nolock(map, &start, length, &after);
+
   if (error)
     return error;
-  if ((flags & VM_FIXED) && (start != seg->start))
-    return ENOMEM;
+
+  assert(((flags & VM_FIXED) && (start == seg->start)) || !(flags & VM_FIXED));
 
   assert((flags & (VM_SHARED | VM_PRIVATE)) != (VM_SHARED | VM_PRIVATE));
 
