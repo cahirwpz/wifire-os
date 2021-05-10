@@ -40,6 +40,23 @@ jobs:
             usr.bin/*/*.uelf
             initrd.cpio
 
+  build_mips_gcc_kgprof:
+    name: Build MIPS (GCC + KGPROF)
+    runs-on: self-hosted
+    needs: [verify_c_style, verify_py_style]
+    steps:
+      - uses: actions/checkout@v2
+      - run: make BOARD=malta KGPROF=1
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "mips gcc kgprof kernel+ramdisk"
+          path: |
+            sys/mimiker.elf
+            sys/mimiker.elf.map
+            bin/*/*.uelf
+            usr.bin/*/*.uelf
+            initrd.cpio
+
   build_mips_clang:
     name: Build MIPS (Clang)
     runs-on: self-hosted
@@ -91,6 +108,22 @@ jobs:
         with:
           name: "mips gcc kernel+ramdisk"
       - run: ./run_tests.py --board malta --timeout=80 --times=50
+
+  kernel_tests_mips_gcc_kgprof:
+    name: Tests MIPS (GCC + KGPROF)
+    runs-on: self-hosted
+    needs: build_mips_gcc_kgprof
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: "mips gcc kgprof kernel+ramdisk"
+      - run: ./run_tests.py --board malta --times=1
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "mips gcc gmon.out"
+          path: |
+            gmon.out
 
   kernel_tests_aarch64_gcc:
     name: Tests AArch64 (GCC + KASAN)

@@ -20,6 +20,7 @@ define post-mortem
 end
 
 break ktest_success
+kgmon
 commands
 kill
 quit 0
