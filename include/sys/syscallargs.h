@@ -418,3 +418,16 @@ typedef struct {
   SYSCALLARG(struct itimerval *) val;
   SYSCALLARG(struct itimerval *) oval;
 } setitimer_args_t;
+
+typedef struct {
+  SYSCALLARG(int) flags;
+} kqueue1_args_t;
+
+typedef struct {
+  SYSCALLARG(int) kq;
+  SYSCALLARG(const struct kevent *) changelist;
+  SYSCALLARG(size_t) nchanges;
+  SYSCALLARG(struct kevent *) eventlist;
+  SYSCALLARG(size_t) nevents;
+  SYSCALLARG(const struct timespec *) timeout;
+} kevent_args_t;

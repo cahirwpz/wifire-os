@@ -95,5 +95,7 @@
 79  { int sys_sigpending(sigset_t *set); }
 80  { int sys_getitimer(int which, struct itimerval *val); }
 81  { int sys_setitimer(int which, struct itimerval *val, struct itimerval *oval); }
+82  { int sys_kqueue1(int flags); }
+83  { int sys_kevent(int kq, const struct kevent *changelist, size_t nchanges, struct kevent *eventlist, size_t nevents, const struct timespec *timeout); }
 
 ; vim: ts=4 sw=4 sts=4 et

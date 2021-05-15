@@ -13,6 +13,7 @@
 #include <sys/malloc.h>
 #include <sys/device.h>
 #include <bitstring.h>
+#include <sys/event.h>
 #include <sys/libkern.h>
 
 /* Maximum length of an evdev device */
@@ -91,8 +92,10 @@ typedef struct evdev_client {
   evdev_dev_t *ec_evdev;            /* (!) associated evdev device */
   LIST_ENTRY(evdev_client) ec_link; /* (s) link on client list */
 
+  mtx_t ec_lock; /* Protects various fields in evdev_client struct. */
+  knlist_t ec_knlist; /* (c) knotes attached to this evdev client. */
+
   /* Event ring buffer implementation: */
-  mtx_t ec_lock;                /* serializes access to ring buffer data */
   evdev_clock_id_t ec_clock_id; /* (c) clock used to timestamp events */
   condvar_t ec_buffer_cv;       /* (c) wait here for state change to happen */
   size_t ec_buffer_size;        /* (c) ring buffer capacity */
@@ -108,6 +111,15 @@ typedef struct evdev_client {
 
 static bool evdev_client_empty(evdev_client_t *client) {
   return client->ec_buffer_head == client->ec_buffer_ready;
+}
+
+static bool evdev_client_sizeq(evdev_client_t *client) {
+  size_t size = client->ec_buffer_size;
+  size_t ready = client->ec_buffer_ready;
+  size_t head = client->ec_buffer_head;
+  if (ready < head)
+    return ready + size - head;
+  return ready - head;
 }
 
 /* Get time depending on the client clock id */
@@ -323,6 +335,28 @@ static void evdev_soft_repeat(evdev_dev_t *evdev, uint16_t key, int32_t state) {
  * Device file interface implementation.
  */
 
+static void evdev_kqdetach(knote_t *kn) {
+  evdev_client_t *client = kn->kn_hook;
+  
+  WITH_MTX_LOCK(&client->ec_lock) {
+    SLIST_REMOVE(&client->ec_knlist, kn, knote, kn_objlink);
+  }
+}
+
+static int evdev_kqread(knote_t *kn, long hint) {
+  evdev_client_t *client = kn->kn_hook;
+  assert(mtx_owned(&client->ec_lock));
+
+  kn->kn_kevent.data = evdev_client_sizeq(client) * sizeof(input_event_t);
+  return !evdev_client_empty(client);
+}
+
+static filterops_t evdev_filterops = {
+  .f_attach = NULL,
+  .f_detach = evdev_kqdetach,
+  .f_event = evdev_kqread,
+};
+
 static int evdev_read(file_t *f, uio_t *uio) {
   evdev_client_t *client = f->f_data;
   int error = 0;
@@ -440,6 +474,23 @@ static int evdev_ioctl(file_t *f, u_long cmd, void *data) {
   return EINVAL;
 }
 
+static int evdev_kqfilter(file_t *f, knote_t *kn) {
+  evdev_client_t *client = f->f_data;
+
+  if (kn->kn_kevent.filter != EVFILT_READ)
+    return EINVAL;
+
+  kn->kn_fop = &evdev_filterops;
+  kn->kn_hook = client;
+  kn->kn_objlock = &client->ec_lock;
+
+  WITH_MTX_LOCK(&client->ec_lock) {
+    SLIST_INSERT_HEAD(&client->ec_knlist, kn, kn_objlink);
+  }
+  
+  return 0;
+}
+
 static fileops_t evdev_fileops = {
   .fo_read = evdev_read,
   .fo_write = nowrite,
@@ -447,6 +498,7 @@ static fileops_t evdev_fileops = {
   .fo_seek = noseek,
   .fo_stat = default_vnstat,
   .fo_ioctl = evdev_ioctl,
+  .fo_kqfilter = evdev_kqfilter
 };
 
 static int evdev_open(vnode_t *v, int mode, file_t *fp) {
@@ -465,6 +517,7 @@ static int evdev_open(vnode_t *v, int mode, file_t *fp) {
   client->ec_evdev = evdev;
   mtx_init(&client->ec_lock, 0);
   cv_init(&client->ec_buffer_cv, "ec_buffer_cv");
+  SLIST_INIT(&client->ec_knlist);
 
   WITH_MTX_LOCK (&evdev->ev_lock)
     LIST_INSERT_HEAD(&evdev->ev_clients, client, ec_link);

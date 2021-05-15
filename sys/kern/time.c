@@ -24,7 +24,7 @@ int do_clock_gettime(clockid_t clk, timespec_t *tp) {
   return 0;
 }
 
-static systime_t ts2hz(const timespec_t *ts) {
+systime_t ts2hz(const timespec_t *ts) {
   if (ts->tv_sec < 0 || (ts->tv_sec == 0 && ts->tv_nsec == 0))
     return 0;
 

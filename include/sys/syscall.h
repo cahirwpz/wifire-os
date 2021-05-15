@@ -87,6 +87,8 @@
 #define SYS_sigpending 79
 #define SYS_getitimer 80
 #define SYS_setitimer 81
-#define SYS_MAXSYSCALL 82
+#define SYS_kqueue1 82
+#define SYS_kevent 83
+#define SYS_MAXSYSCALL 84
 
 #define SYS_MAXSYSARGS 6

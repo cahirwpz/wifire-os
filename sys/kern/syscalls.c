@@ -24,6 +24,7 @@
 #include <sys/cred.h>
 #include <sys/statvfs.h>
 #include <sys/pty.h>
+#include <sys/event.h>
 
 #include "sysent.h"
 
@@ -1247,5 +1248,54 @@ static int sys_setitimer(proc_t *p, setitimer_args_t *args, register_t *res) {
   if (u_oval)
     error = copyout_s(oval, u_oval);
 
+  return error;
+}
+
+static int sys_kqueue1(proc_t *p, kqueue1_args_t *args, register_t *res) {
+  int flags = SCARG(args, flags);
+  int fd, error;
+
+  klog("kqueue1(%d)", flags);
+
+  error = do_kqueue1(p, flags, &fd);
+  *res = fd;
+
+  return error;
+}
+
+static int sys_kevent(proc_t *p, kevent_args_t *args, register_t *res) {
+  int kq = SCARG(args, kq);
+  const struct kevent *u_changelist = SCARG(args, changelist);
+  size_t nchanges = SCARG(args, nchanges);
+  struct kevent *u_eventlist = SCARG(args, eventlist);
+  size_t nevents = SCARG(args, nevents);
+  const struct timespec *u_timeout = SCARG(args, timeout);
+
+  kevent_t *changelist = kmalloc(M_TEMP, nchanges * sizeof(kevent_t), 0);
+  kevent_t *eventlist = kmalloc(M_TEMP, nevents * sizeof(kevent_t), 0);
+  timespec_t timeout;
+  int error, nret;
+
+  klog("kevent(%d, %p, %u, %p, %u, %p)", kq, u_changelist, nchanges,
+       u_eventlist, nevents, u_timeout);
+
+  if ((error = copyin(u_changelist, changelist, nchanges * sizeof(kevent_t))))
+    goto end;
+
+  if ((error = copyin_s(u_timeout, timeout)))
+    goto end;
+
+  if ((error = do_kevent(p, kq, changelist, nchanges, eventlist, nevents,
+                         &timeout, &nret)))
+    goto end;
+
+  if ((error = copyout(eventlist, u_eventlist, nret * sizeof(kevent_t))))
+    goto end;
+
+  *res = nret;
+
+end:
+  kfree(M_TEMP, changelist);
+  kfree(M_TEMP, eventlist);
   return error;
 }
