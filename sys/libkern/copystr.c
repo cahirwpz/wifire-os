@@ -20,8 +20,8 @@
  * If you plan to change this function look at machine dependent implementation
  * of copyerr.
  */
-__no_sanitize int copystr(const void *kfaddr, void *kdaddr, size_t len,
-                          size_t *done) {
+__no_sanitize __no_instrument_function int
+copystr(const void *kfaddr, void *kdaddr, size_t len, size_t *done) {
   const char *src = kfaddr;
   char *dst = kdaddr;
   size_t i;

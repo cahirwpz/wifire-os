@@ -31,3 +31,4 @@ include $(TOPDIR)/build/build.kern.mk
 $(SOURCES-AARCH64): assym.h
 
 boot.o : CFLAGS_KASAN =
+boot.o : CFLAGS_KGPROF =

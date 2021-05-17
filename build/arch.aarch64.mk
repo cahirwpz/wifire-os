@@ -21,6 +21,9 @@ ifeq ($(KERNEL), 1)
 		       --param asan-stack=1 \
 		       --param asan-instrument-allocas=1
 	endif
+	ifeq ($(KGPROF), 1)
+  CFLAGS_KGPROF = -finstrument-functions
+	endif
 else
 	CFLAGS += -mcpu=cortex-a53 -march=armv8-a
 endif

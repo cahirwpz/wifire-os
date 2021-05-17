@@ -35,7 +35,7 @@ DSTPATH = $(DIR)$@
 
 %.o: %.c
 	@echo "[CC] $(SRCPATH) -> $(DSTPATH)"
-	$(CC) $(CFLAGS) $(CFLAGS.$*.c) $(CFLAGS_KASAN) $(CPPFLAGS) $(WFLAGS) \
+	$(CC) $(CFLAGS) $(CFLAGS.$*.c) $(CFLAGS_KASAN) $(CFLAGS_KGPROF) $(CPPFLAGS) $(WFLAGS) \
 	      -c -o $@ $(realpath $<)
 
 %.o: %.S

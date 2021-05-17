@@ -22,13 +22,13 @@ typedef struct device device_t;
  *
  * \sa preempt_disable()
  */
-void intr_disable(void);
+void intr_disable(void) __no_instrument_kgprof;
 
 /*! \brief Enables interrupts. */
-void intr_enable(void);
+void intr_enable(void) __no_instrument_kgprof;
 
 /*! \brief Checks if interrupts are disabled now. */
-bool intr_disabled(void);
+bool intr_disabled(void) __no_instrument_kgprof;
 
 /* Two following functions are workaround to make interrupt disabling work with
  * scoped and with statement. */
@@ -88,6 +88,6 @@ void intr_event_run_handlers(intr_event_t *ie);
 typedef void (*intr_root_filter_t)(ctx_t *ctx, device_t *dev, void *arg);
 
 void intr_root_claim(intr_root_filter_t filter, device_t *dev, void *arg);
-void intr_root_handler(ctx_t *ctx);
+void intr_root_handler(ctx_t *ctx) __no_instrument_kgprof;
 
 #endif /* !_SYS_INTERRUPT_H_ */

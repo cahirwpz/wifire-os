@@ -60,7 +60,7 @@ void mcontext_restart_syscall(mcontext_t *ctx) {
   /* Nothing needs to be done. */
 }
 
-bool user_mode_p(ctx_t *ctx) {
+__no_instrument_kgprof bool user_mode_p(ctx_t *ctx) {
   return (_REG(ctx, SR) & SR_KSU_MASK) == SR_KSU_USER;
 }
 

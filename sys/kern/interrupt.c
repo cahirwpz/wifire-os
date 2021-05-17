@@ -42,12 +42,12 @@ typedef struct intr_handler {
 
 static void intr_thread(void *arg);
 
-bool intr_disabled(void) {
+__no_instrument_kgprof bool intr_disabled(void) {
   thread_t *td = thread_self();
   return (td->td_idnest > 0) && cpu_intr_disabled();
 }
 
-void intr_disable(void) {
+__no_instrument_kgprof void intr_disable(void) {
   cpu_intr_disable();
   thread_self()->td_idnest++;
 }
@@ -166,7 +166,7 @@ void intr_root_claim(intr_root_filter_t filter, device_t *dev, void *arg) {
   ir_arg = arg;
 }
 
-void intr_root_handler(ctx_t *ctx) {
+__no_instrument_kgprof void intr_root_handler(ctx_t *ctx) {
   thread_t *td = thread_self();
 
   assert(cpu_intr_disabled());

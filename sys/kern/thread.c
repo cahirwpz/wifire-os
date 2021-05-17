@@ -131,7 +131,7 @@ void thread_delete(thread_t *td) {
   pool_free(P_THREAD, td);
 }
 
-thread_t *thread_self(void) {
+__no_instrument_kgprof thread_t *thread_self(void) {
   return PCPU_GET(curthread);
 }
 

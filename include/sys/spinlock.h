@@ -49,10 +49,10 @@ void spin_init(spin_t *s, lk_attr_t attr);
 #define spin_destroy(m)
 
 /*! \brief Check if calling thread is the owner of \a s. */
-bool spin_owned(spin_t *s);
+bool spin_owned(spin_t *s) __no_instrument_kgprof;
 
 /*! \brief Acquires the spin lock (with custom \a waitpt) */
-void _spin_lock(spin_t *s, const void *waitpt);
+void _spin_lock(spin_t *s, const void *waitpt) __no_instrument_kgprof;
 
 /*! \brief Acquire the spin lock.
  *
@@ -63,7 +63,7 @@ static inline void spin_lock(spin_t *s) {
 }
 
 /*! \brief Release the spin lock. */
-void spin_unlock(spin_t *s);
+void spin_unlock(spin_t *s) __no_instrument_kgprof;
 
 DEFINE_CLEANUP_FUNCTION(spin_t *, spin_unlock);
 

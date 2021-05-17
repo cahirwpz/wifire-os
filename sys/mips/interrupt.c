@@ -9,11 +9,11 @@
  * hazard is cleared by the EHB, JALR.HB, JR.HB, or ERET instructions. Software
  * must not assume that a fixed latency will clear the execution hazard. */
 
-void cpu_intr_disable(void) {
+__no_instrument_kgprof void cpu_intr_disable(void) {
   asm volatile("di; ehb");
 }
 
-void cpu_intr_enable(void) {
+__no_instrument_kgprof void cpu_intr_enable(void) {
   asm volatile("ei; ehb");
 }
 
@@ -22,6 +22,6 @@ void cpu_intr_enable(void) {
  *
  * The kernel leaves Exception (EXL) or Error Level (ERL) as soon as possible,
  * hence we consider exceptions to be disabled if and only if SR.IE = 0. */
-bool cpu_intr_disabled(void) {
+__no_instrument_kgprof bool cpu_intr_disabled(void) {
   return (mips32_getsr() & SR_IE) == 0;
 }

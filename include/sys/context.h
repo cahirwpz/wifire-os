@@ -11,7 +11,7 @@ typedef struct ctx ctx_t;
 typedef struct mcontext mcontext_t;
 
 /*! \brief Checks if saved context belongs to user space. */
-bool user_mode_p(ctx_t *ctx);
+bool user_mode_p(ctx_t *ctx) __no_instrument_kgprof;
 
 /*! \brief Prepare ctx to jump into a kernel thread. */
 void ctx_init(ctx_t *ctx, void *pc, void *sp);

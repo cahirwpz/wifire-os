@@ -29,3 +29,4 @@ include $(TOPDIR)/build/build.kern.mk
 $(SOURCES-MIPS): assym.h
 
 boot.o : CFLAGS_KASAN =
+boot.o : CFLAGS_KGPROF =
