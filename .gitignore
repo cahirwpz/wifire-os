@@ -6,6 +6,7 @@
 
 # Executables
 *.elf
+*.elf32
 *.uelf
 *.test
 

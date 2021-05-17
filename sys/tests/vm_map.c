@@ -17,6 +17,10 @@
 #define TOO_MUCH 0x800000000000L
 #endif
 
+#ifdef __amd64__
+#define TOO_MUCH 0x0 /* TODO(MichalBlk): fix me. */
+#endif
+
 static int paging_on_demand_and_memory_protection_demo(void) {
   /* This test mustn't be preempted since PCPU's user-space vm_map will not be
    * restored while switching back. */

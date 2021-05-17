@@ -1,0 +1,53 @@
+OUTPUT_ARCH(i386:x86-64)
+ENTRY(_start)
+
+INPUT(crt0.o crt0-common.o -lc -lgcc -lm)
+
+PHDRS
+{
+    text   PT_LOAD FLAGS(5); /* read-only, executable */
+    data   PT_LOAD FLAGS(6); /* read-write */
+    rodata PT_LOAD FLAGS(4); /* read-only */
+    bss    PT_LOAD FLAGS(6); /* read-write */
+}
+SECTIONS
+{
+    .text 0x00400000 :
+    {
+        *(.text .text.*)
+        . = ALIGN(4096);
+    } : text
+
+    . = ALIGN(4096);
+    .data :
+    {
+        *(.data .data.*)
+        . = ALIGN(4);
+    } : data
+
+    . = ALIGN(4096);
+    .rodata :
+    {
+        . = ALIGN(4096);
+        *(.rodata .rodata.*)
+        . = ALIGN(4);
+    } : rodata
+
+    . = ALIGN(4096);
+    .bss :
+    {
+        . = ALIGN(4096);
+        *(.bss .bss.*)
+        . = ALIGN(4);
+    } : bss
+
+    /DISCARD/ :
+    {
+        *(.comment)
+        *(.note)
+        *(.options)
+        *(.pdr)
+        *(.reginfo)
+        *(.gnu.attributes)
+    }
+}

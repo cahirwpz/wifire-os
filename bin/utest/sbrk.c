@@ -13,6 +13,10 @@
 #define TOO_MUCH 0x4000000000000000L
 #endif
 
+#ifdef __amd64__
+#define TOO_MUCH 0x0 /* TODO(MichalBlk): fix me. */
+#endif
+
 static void *sbrk_orig = NULL;
 
 /* Note that sbrk returns old brk value */

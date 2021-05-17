@@ -22,6 +22,10 @@ mimiker.elf: $(KLIBDEPS)
 	@echo "[LD] Linking kernel image: $@"
 	$(LD) $(LDFLAGS) -Wl,-Map=$@.map $(LDLIBS) -o $@
 
+mimiker.elf32: mimiker.elf
+	@echo "[OBJCOPY] Prepare kernel image: $@"
+	$(OBJCOPY) -I $(ELFTYPE) -O $(ELF32TYPE) $^ $@
+
 mimiker.img: mimiker.elf
 	@echo "[OBJCOPY] Prepare kernel image: $@"
 	$(OBJCOPY) -O binary $^ $@

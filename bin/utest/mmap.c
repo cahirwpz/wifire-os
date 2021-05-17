@@ -22,6 +22,12 @@
 #define BAD_ADDR_SPAN_LEN 0xfffe800000002000
 #endif
 
+#ifdef __amd64__
+/* TODO(MichalBlk): fix me. */
+#define BAD_ADDR_SPAN 0x0
+#define BAD_ADDR_SPAN_LEN 0x0
+#endif
+
 #define mmap_anon_priv(addr, length, prot)                                     \
   mmap((addr), (length), (prot), MAP_ANON | MAP_PRIVATE, -1, 0)
 

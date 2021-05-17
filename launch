@@ -62,6 +62,9 @@ CONFIG = {
             'rpi3': {
                 'kernel': 'sys/mimiker.img.gz',
             },
+            'pc': {
+                'kernel': 'sys/mimiker.elf32',
+            },
         },
     },
     'qemu': {
@@ -104,7 +107,14 @@ CONFIG = {
                 'uarts': [
                     dict(name='/dev/cons', port=RandomPort(), raw=True)
                 ]
-            }
+            },
+            'pc': {
+                'binary': 'qemu-mimiker-x86_64',
+                'options': [
+                    '-cpu', 'qemu64'],
+                'network_options': [],
+                'uarts': []
+            },
         }
     },
     'gdb': {
@@ -127,7 +137,10 @@ CONFIG = {
             },
             'rpi3': {
                 'binary': 'aarch64-mimiker-elf-gdb'
-            }
+            },
+            'pc': {
+                'binary': 'x86_64-mimiker-elf-gdb'
+            },
         }
     }
 }
@@ -356,7 +369,8 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--graphics', action='store_true',
                         help='Enable VGA output.')
     parser.add_argument('-b', '--board', default='malta',
-                        choices=['malta', 'rpi3'], help='Emulated board.')
+                        choices=['malta', 'rpi3', 'pc'],
+                        help='Emulated board.')
     args = parser.parse_args()
 
     # Used by tmux to override ./.tmux.conf with ./.tmux.conf.local

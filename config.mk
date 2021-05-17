@@ -21,6 +21,10 @@ ARCH := aarch64
 AARCH64 := 1
 endif
 
+ifeq ($(BOARD), pc)
+ARCH := amd64
+endif
+
 VERBOSE ?= 0
 CLANG ?= 0
 LOCKDEP ?= 0

@@ -5,7 +5,7 @@ TOPDIR = $(realpath ..)
 HEADERS = $(wildcard *.h) $(foreach dir, machine sys, $(wildcard $(dir)/*.h))
 INSTALL-FILES = $(addprefix $(SYSROOT)/usr/include/, $(HEADERS))
 
-SOURCES_H = $(foreach dir, . dev aarch64 mips sys, $(wildcard $(dir)/*.h))
+SOURCES_H = $(foreach dir, . dev aarch64 amd64 mips sys, $(wildcard $(dir)/*.h))
 FORMAT-EXCLUDE = mips/m32c0.h sys/syscall.h sys/syscallargs.h
 
 all: build
