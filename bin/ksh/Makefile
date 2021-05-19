@@ -26,6 +26,9 @@ emacs.out: emacs.c
 	./emacs-gen.sh $(CURDIR)/emacs.c > emacs.out.tmp \
 	    && mv emacs.out.tmp emacs.out
 
-history.CFLAGS += -Wno-stringop-overflow
+ifneq ($(CLANG), 1)
+# stringop-overflow is a GCC-specific warning
+CFLAGS.history.c += -Wno-stringop-overflow
+endif
 
 include $(TOPDIR)/build/build.prog.mk

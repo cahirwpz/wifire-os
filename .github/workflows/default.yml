@@ -40,6 +40,23 @@ jobs:
             usr.bin/*/*.uelf
             initrd.cpio
 
+  build_mips_gcc_opt:
+    name: Build MIPS (GCC optimized)
+    runs-on: self-hosted
+    needs: [verify_c_style, verify_py_style]
+    steps:
+      - uses: actions/checkout@v2
+      - run: make BOARD=malta OPTFLAGS=-O2
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "mips gcc opt kernel+ramdisk"
+          path: |
+            sys/mimiker.elf
+            sys/mimiker.elf.map
+            bin/*/*.uelf
+            usr.bin/*/*.uelf
+            initrd.cpio
+
   build_mips_clang:
     name: Build MIPS (Clang)
     runs-on: self-hosted
@@ -73,6 +90,22 @@ jobs:
             sys/mimiker.elf.map
             initrd.cpio
 
+  build_aarch64_gcc_opt:
+    name: Build AArch64 (GCC optimized)
+    runs-on: self-hosted
+    needs: [verify_c_style, verify_py_style]
+    steps:
+      - uses: actions/checkout@v2
+      - run: make BOARD=rpi3 OPTFLAGS=-O2
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "aarch64 gcc opt kernel+ramdisk"
+          path: |
+            sys/mimiker.elf
+            sys/mimiker.img.gz
+            sys/mimiker.elf.map
+            initrd.cpio
+
   build_aarch64_clang:
     name: Build AArch64 (Clang)
     runs-on: self-hosted
@@ -92,6 +125,17 @@ jobs:
           name: "mips gcc kernel+ramdisk"
       - run: ./run_tests.py --board malta --timeout=80 --times=50
 
+  kernel_tests_mips_gcc_opt:
+    name: Tests MIPS (GCC optimized)
+    runs-on: self-hosted
+    needs: build_mips_gcc_opt
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: "mips gcc opt kernel+ramdisk"
+      - run: ./run_tests.py --board malta --times=10
+
   kernel_tests_aarch64_gcc:
     name: Tests AArch64 (GCC + KASAN)
     runs-on: self-hosted
@@ -102,3 +146,14 @@ jobs:
         with:
           name: "aarch64 gcc kernel+ramdisk"
       - run: ./run_tests.py --board rpi3 --times=50
+
+  kernel_tests_aarch64_gcc_opt:
+    name: Tests AArch64 (GCC optimized)
+    runs-on: self-hosted
+    needs: build_aarch64_gcc_opt
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: "aarch64 gcc opt kernel+ramdisk"
+      - run: ./run_tests.py --board rpi3 --times=10
