@@ -2,7 +2,29 @@
 
 TOPDIR = $(realpath ..)
 
-SUBDIR = env id login stat wc script su
+SUBDIR = \
+	 cmp \
+	 col \
+	 cut \
+	 env \
+	 find \
+	 grep \
+	 head \
+	 id \
+	 join \
+	 login \
+	 mkfifo \
+	 nohup \
+	 resize \
+	 script \
+	 sed \
+	 seq \
+	 stat \
+	 su \
+   	 tail \
+	 tr \
+	 uniq \
+	 wc
 
 all: build
 
