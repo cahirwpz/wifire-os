@@ -12,6 +12,7 @@
 
 #define PAGESIZE 4096
 #define SUPERPAGESIZE (1 << 22) /* 4 MB */
+#define PAGE_SHIFT 12
 
 #define VM_PHYSSEG_NMAX 16
 
