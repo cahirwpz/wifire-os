@@ -81,6 +81,8 @@ CONFIG = {
                 'binary': 'qemu-mimiker-mipsel',
                 'options': [
                     '-device', 'VGA',
+                    # '-drive', 'if=none,id=stick,file=usb_drive.img',
+                    # '-device', 'usb-storage,drive=stick',
                     '-machine', 'malta',
                     '-cpu', '24Kf'],
                 'network_options': [

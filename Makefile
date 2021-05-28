@@ -41,6 +41,13 @@ test: sys-build initrd.cpio
 
 PHONY-TARGETS += setup test
 
+# USB drive size in GB.
+USB-DRIVE-SIZE = 1
+
+usb_drive.img:
+	qemu-img create $@ $(USB-DRIVE-SIZE)G
+
+
 IMGVER = 1.8.1
 IMGNAME = cahirwpz/mimiker-ci
 
