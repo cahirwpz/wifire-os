@@ -66,6 +66,7 @@ SOURCES = \
 	vfs_name.c \
 	vfs_readdir.c \
 	vfs_syscalls.c \
+	vfs_vcache.c \
 	vfs_vnode.c \
 	vm_map.c \
 	vm_object.c \

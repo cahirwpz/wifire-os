@@ -47,6 +47,7 @@ static vnodeops_t vfs_root_ops = {.v_lookup = vfs_root_vnode_lookup};
 static int vfs_register(vfsconf_t *vfc);
 
 void init_vfs(void) {
+  vfs_vcache_init();
   vnodeops_init(&vfs_root_ops);
 
   vfs_root_vnode = vnode_new(V_DIR, &vfs_root_ops, NULL);

@@ -13,6 +13,7 @@ typedef struct timeval timeval_t;
 typedef struct file file_t;
 typedef struct cred cred_t;
 typedef struct timespec timespec_t;
+typedef struct mount mount_t;
 
 /*! \brief Called during kernel initialization. */
 void init_vfs(void);
@@ -133,6 +134,12 @@ int vfs_maybe_descend(vnode_t **vp);
 
 /* Finds name of v-node in given directory. */
 int vfs_name_in_dir(vnode_t *dv, vnode_t *v, char *buf, size_t *lastp);
+
+void vfs_vcache_init(void);
+vnode_t *vfs_vcache_hashget(mount_t *mp, ino_t ino);
+vnode_t *vfs_vcache_new_vnode(void);
+void vfs_vcache_put(vnode_t *vn);
+void vfs_vcache_bind(vnode_t *vn);
 
 #endif /* !_KERNEL */
 

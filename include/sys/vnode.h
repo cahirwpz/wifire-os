@@ -85,8 +85,11 @@ typedef struct {
 } vnlock_t;
 
 typedef struct vnode {
-  vnodetype_t v_type;        /* Vnode type, see above */
-  TAILQ_ENTRY(vnode) v_list; /* Entry on the mount vnodes list */
+  vnodetype_t v_type;          /* Vnode type, see above */
+  TAILQ_ENTRY(vnode) v_list;   /* Entry on the mount vnodes list */
+  TAILQ_ENTRY(vnode) v_free;   /* Entry on vnode free list (vcache) */
+  TAILQ_ENTRY(vnode) v_cached; /* Entry on vnode list in vcache bucket */
+  ino_t ino;                   /* inode number (used by vcache) */
 
   vnodeops_t *v_ops; /* Vnode operations */
   void *v_data;      /* Filesystem-specific arbitrary data */
