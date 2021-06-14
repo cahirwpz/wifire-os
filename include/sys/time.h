@@ -4,6 +4,7 @@
 #include <sys/types.h>
 
 #define CLK_TCK 1000 /* system clock ticks per second 1[tick] = 1[ms]  */
+#define STAT_TCK 127 /* statclock ticks per second 1[tick] = 7,87[ms] */
 
 typedef struct tm {
   int tm_sec;          /* seconds after the minute [0-61] */

@@ -63,7 +63,7 @@ static void pit_update_time(pit_state_t *pit) {
 
   pit_incr_ticks(pit, ticks_passed);
   assert(last_sec < pit->sec ||
-         (last_sec == pit->sec && last_ticks < pit->ticks));
+         (last_sec == pit->sec && last_ticks <= pit->ticks));
   assert(pit->ticks < TIMER_FREQ);
 }
 
