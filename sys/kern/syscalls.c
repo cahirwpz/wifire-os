@@ -335,9 +335,11 @@ end:
 static int sys_mount(proc_t *p, mount_args_t *args, register_t *res) {
   const char *u_type = SCARG(args, type);
   const char *u_path = SCARG(args, path);
+  const char *u_source = SCARG(args, source);
 
   char *type = kmalloc(M_TEMP, PATH_MAX, 0);
   char *path = kmalloc(M_TEMP, PATH_MAX, 0);
+  char *source = NULL;
   size_t n = 0;
   int error;
 
@@ -348,13 +350,21 @@ static int sys_mount(proc_t *p, mount_args_t *args, register_t *res) {
   /* Copyout pathname. */
   if ((error = copyinstr(u_path, path, PATH_MAX, &n)))
     goto end;
+  /* Alloc and copyout source pathanme */
+  if (u_source) {
+    source = kmalloc(M_TEMP, PATH_MAX, 0);
+    if ((error = copyinstr(u_source, source, PATH_MAX, &n)))
+      goto end;
+  }
 
   klog("mount(\"%s\", \"%s\")", path, type);
 
-  error = do_mount(p, type, path);
+  error = do_mount(p, source, type, path);
 end:
   kfree(M_TEMP, type);
   kfree(M_TEMP, path);
+  if (u_source)
+    kfree(M_TEMP, source);
   return error;
 }
 

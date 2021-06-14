@@ -330,7 +330,7 @@ static int initrd_root(mount_t *m, vnode_t **v) {
   return 0;
 }
 
-static int initrd_mount(mount_t *m) {
+static int initrd_mount(mount_t *m, vnode_t *vsrc) {
   vnode_t *root = vnode_new(V_DIR, &initrd_vops, root_node);
   root->v_mount = m;
   root_node->c_vnode = root;

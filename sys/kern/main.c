@@ -34,9 +34,9 @@
    userspace init program. */
 static void mount_fs(void) {
   proc_t *p = &proc0;
-  do_mount(p, "initrd", "/");
-  do_mount(p, "devfs", "/dev");
-  do_mount(p, "tmpfs", "/tmp");
+  do_mount(p, NULL, "initrd", "/");
+  do_mount(p, NULL, "devfs", "/dev");
+  do_mount(p, NULL, "tmpfs", "/tmp");
   do_fchmodat(p, AT_FDCWD, "/tmp", ACCESSPERMS | S_ISTXT, 0);
 }
 

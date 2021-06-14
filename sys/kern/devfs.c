@@ -345,7 +345,7 @@ static vnodeops_t devfs_dir_vnodeops = {
 
 /* We are using a single vnode for each devfs_node
  * instead of allocating a new one each time, to simplify things. */
-static int devfs_mount(mount_t *m) {
+static int devfs_mount(mount_t *m, vnode_t *vsrc) {
   devfs.root->dn_vnode->v_mount = m;
   m->mnt_data = &devfs;
   return 0;

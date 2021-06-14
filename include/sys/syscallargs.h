@@ -78,6 +78,7 @@ typedef struct {
 } mmap_args_t;
 
 typedef struct {
+  SYSCALLARG(const char *) source;
   SYSCALLARG(const char *) type;
   SYSCALLARG(const char *) path;
 } mount_args_t;
