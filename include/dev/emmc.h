@@ -95,7 +95,7 @@ typedef struct emmc_resp {
 #define EMMC_CMD_FAST_IO 39
 #define EMMC_CMD_GO_IRQ_STATE 40
 #define EMMC_CMD_LOCK_UNLOCK 42
-/* Illegal as `emmc_send_cmd` arguments. Use dedicated procedures instead. */
+/* Illegal as `cmd_idx` of `emmc_cmd_t`. Use command flags instead. */
 #define EMMC_CMD_APP_CMD 55
 #define EMMC_CMD_GEN_CMD 56
 
@@ -108,16 +108,18 @@ typedef enum {
 } emmc_wait_flags_t;
 
 typedef enum emmc_cmd_flags {
-  EMMC_F_NULL = 0x0,
   /* At most one of these */
   EMMC_F_SUSPEND = 0x01, /* Suspend current data transfer */
   EMMC_F_RESUME = 0x02,  /* Resume last data transfer */
   EMMC_F_ABORT = 0x03,   /* Abort current data transfer */
+  /* At most one of these */
+  EMMC_F_DATA_READ = 0x04,  /* Read data transfer is expected */
+  EMMC_F_DATA_WRITE = 0x08, /* Write data transfer is expected */
   /* Any subset of these */
-  EMMC_F_DATA = 0x04,   /* Data transfer is expected */
-  EMMC_F_CHKIDX = 0x08, /* Check commands index in response */
-  EMMC_F_CHKCRC = 0x10, /* Check CRC in response */
-  EMMC_F_APP = 0x20,    /* App-specific command */
+  EMMC_F_DATA_MULTI = 0x10, /* Multi-block transfer */
+  EMMC_F_CHKIDX = 0x20,     /* Check commands index in response */
+  EMMC_F_CHKCRC = 0x40,     /* Check CRC in response */
+  EMMC_F_APP = 0x80,        /* App-specific command */
 } emmc_cmd_flags_t;
 
 static inline emmc_cmd_flags_t emmc_cmdtype(emmc_cmd_flags_t flags) {
@@ -134,6 +136,10 @@ typedef struct emmc_cmd {
 #define EMMC_VOLTAGE_WINDOW_MID 0x02 /* 1.65V - 1.95V */
 #define EMMC_VOLTAGE_WINDOW_HI 0x04  /* 2.7V -3.6V */
 
+#define EMMC_BUSWIDTH_1 0x01 /* 1-bit bus */
+#define EMMC_BUSWIDTH_4 0x02 /* 4-bit bus */
+#define EMMC_BUSWIDTH_8 0x04 /* 8-bit but */
+
 /* R stands for "read"
  * W stands for "write" */
 typedef enum emmc_prop_id {
@@ -147,21 +153,16 @@ typedef enum emmc_prop_id {
                                * controller is able to operate */
   EMMC_PROP_RW_RESP_LOW,      /* Low 64 bits of response register(s) */
   EMMC_PROP_RW_RESP_HI,       /* High 64 bits of response register(s) */
+  EMMC_PROP_RW_CLOCK_FREQ,    /* Clocking frequency (Hz) */
+  EMMC_PROP_RW_BUSWIDTH,      /* Bus width, ie. no. of data lanes. */
+  EMMC_PROP_RW_RCA,           /* Relative card address */
 } emmc_prop_id_t;
 typedef uint64_t emmc_prop_val_t;
 
-typedef struct emmc_device {
-  uint64_t cid[2];
-  uint64_t csd[2];
-  uint32_t rca;
-  uint32_t hostver;
-  uint32_t appflags;
-} emmc_device_t;
-
 /* For a detailed explanation on semantics refer to the comments above
  * respective wrappers */
-typedef int (*emmc_send_cmd_t)(device_t *dev, emmc_cmd_t cmd, uint32_t arg1,
-                               uint32_t arg2, emmc_resp_t *res);
+typedef int (*emmc_send_cmd_t)(device_t *dev, emmc_cmd_t cmd, uint32_t arg,
+                               emmc_resp_t *res);
 typedef int (*emmc_wait_t)(device_t *dev, emmc_wait_flags_t wflags);
 typedef int (*emmc_read_dat_t)(device_t *dev, void *buf, size_t len, size_t *n);
 typedef int (*emmc_write_dat_t)(device_t *dev, const void *buf, size_t len,
@@ -195,12 +196,13 @@ static inline emmc_methods_t *emmc_methods(device_t *dev) {
  * \param arg1 first argument
  * \param arg2 second argument
  * \param resp pointer for response data to be written to or NULL
- * \return 0 on success EBUSY if device is busy, ETIMEDOUT on timeout.
+ * \return 0 on success EBUSY if device is busy, ETIMEDOUT on timeout, EIO
+ * on internal error.
  */
-static inline int emmc_send_cmd(device_t *dev, emmc_cmd_t cmd, uint32_t arg1,
-                                uint32_t arg2, emmc_resp_t *resp) {
+static inline int emmc_send_cmd(device_t *dev, emmc_cmd_t cmd, uint32_t arg,
+                                emmc_resp_t *resp) {
   device_t *idev = EMMC_METHOD_PROVIDER(dev, send_cmd);
-  return emmc_methods(idev->parent)->send_cmd(dev, cmd, arg1, arg2, resp);
+  return emmc_methods(idev->parent)->send_cmd(dev, cmd, arg, resp);
 }
 
 /**
@@ -234,7 +236,8 @@ static inline int emmc_read(device_t *dev, void *buf, size_t len, size_t *n) {
  * \param buf pointer to where the data should be read from
  * \param len data length
  * \param n pointer for the number of written bytes in or NULL
- * \return 0 on success
+ * \return 0 on success, EBUSY if device is busy, EINVAL on incorrect data
+ * length (not a multiple of block size)
  */
 static inline int emmc_write(device_t *dev, const void *buf, size_t len,
                              size_t *n) {
@@ -248,6 +251,7 @@ static inline int emmc_write(device_t *dev, const void *buf, size_t len,
  * \param id value identifier
  * \param var pointer to where the associated value should be written to
  * \return 0 if value was fetched successfully, non-zero if it wasn't
+ * (ENODEV if option is not supported)
  */
 static inline int emmc_get_prop(device_t *dev, emmc_prop_id_t id,
                                 emmc_prop_val_t *val) {
@@ -261,16 +265,12 @@ static inline int emmc_get_prop(device_t *dev, emmc_prop_id_t id,
  * \param id value identifier
  * \param var pointer to where the associated value should be written to
  * \return 0 if value was fetched successfully, non-zero if it wasn't
+ * (ENODEV if option is not supported)
  */
 static inline int emmc_set_prop(device_t *dev, emmc_prop_id_t id,
                                 emmc_prop_val_t val) {
   device_t *idev = EMMC_METHOD_PROVIDER(dev, set_prop);
   return emmc_methods(idev->parent)->set_prop(dev, id, val);
-}
-
-static inline emmc_device_t *emmc_device_of(device_t *device) {
-  return (emmc_device_t *)((device->bus == DEV_BUS_EMMC) ? device->instance
-                                                         : NULL);
 }
 
 /* Use if a command is expected to respond with R1b */

@@ -3,6 +3,8 @@
 
 #include <dev/bcm2835_gpioreg.h>
 
+#define MMIO_BASE 0xFFFFFFFF3F000000
+
 struct resource_t;
 
 /* Select GPIO alt function. For more information look at

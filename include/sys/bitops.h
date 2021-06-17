@@ -109,7 +109,7 @@ static __inline int __unused ffs64(uint64_t _n) {
  * Find Last Set functions
  */
 #ifndef fls32
-static __inline int __unused fls32(uint32_t _n) {
+static __inline int fls32(uint32_t _n) {
   int _v;
 
   if (!_n)
