@@ -95,7 +95,7 @@ CONFIG = {
                 ]
             },
             'rpi3': {
-                'binary': 'qemu-mimiker-aarch64',
+                'binary': '../qemu-mimiker-aarch64',
                 'options': [
                     '-machine', 'raspi3',
                     '-smp', '4',

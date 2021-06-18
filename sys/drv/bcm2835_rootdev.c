@@ -229,6 +229,12 @@ static int rootdev_attach(device_t *bus) {
                     BCM2835_UART0_SIZE);
   device_add_irq(dev, 0, BCM2835_INT_UART0);
 
+  /* Create DWC OTG device and assign resources to it. */
+  dev = device_add_child(bus, 2);
+  device_add_memory(dev, 0, BCM2835_PERIPHERALS_BUS_TO_PHYS(BCM2835_USB_BASE),
+                    BCM2835_USB_SIZE);
+  device_add_irq(dev, 0, BCM2835_INT_USB);
+
   /* TODO: replace raw resource assignments by parsing FDT file. */
 
   return bus_generic_probe(bus);

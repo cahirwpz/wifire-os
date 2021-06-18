@@ -194,15 +194,16 @@ typedef enum usb_transfer {
   USB_TFR_INTERRUPT = 4,
 } __packed usb_transfer_t;
 
+/* Don't alter the following values! */
 typedef enum usb_direction {
-  USB_DIR_INPUT,
-  USB_DIR_OUTPUT,
+  USB_DIR_OUTPUT = 0,
+  USB_DIR_INPUT = 1,
 } __packed usb_direction_t;
 
-/* XXX: FTTB, we only handle low and full speed devices. */
 typedef enum usb_speed {
   USB_SPD_LOW,
   USB_SPD_FULL,
+  USB_SPD_HIGH,
 } __packed usb_speed_t;
 
 /* USB string kinds. */
@@ -243,7 +244,7 @@ typedef struct usb_device {
 typedef struct usb_buf {
   condvar_t cv;           /* wait for the transfer to complete */
   spin_t lock;            /* buffer guard */
-  usb_endpt_t *endpt;     /* device's endpoint we're talking with */
+  usb_endpt_t *endpt;     /* data stage destination endpoint */
   void *data;             /* data buffer */
   void *priv;             /* buffer's private data (do not alter!) */
   uint16_t transfer_size; /* size of data to transfer in the data stage */
