@@ -23,6 +23,15 @@ class Process(metaclass=GdbStructMeta):
         return cls(gdb.parse_and_eval('(struct proc *)' + ptr).dereference())
 
     @classmethod
+    def from_pid(cls, pid):
+        alive = list(TailQueue(global_var('proc_list'), 'p_all'))
+        dead = list(TailQueue(global_var('zombie_list'), 'p_all'))
+        for p in alive + dead:
+            if p['p_pid'] == pid:
+                return cls(p)
+        return None
+
+    @classmethod
     def list_all(cls):
         alive = TailQueue(global_var('proc_list'), 'p_all')
         dead = TailQueue(global_var('zombie_list'), 'p_all')
@@ -30,6 +39,12 @@ class Process(metaclass=GdbStructMeta):
 
     def __repr__(self):
         return 'proc{pid=%d}' % self.p_pid
+
+    def address(self):
+        return self._obj.address
+
+    def vm_map(self):
+        return self._obj['p_uspace']
 
 
 class Kprocess(SimpleCommand):
@@ -47,11 +62,17 @@ class Kprocess(SimpleCommand):
         print(table)
 
 
-class CurrentProcess(gdb.Function):
-    """Return address of currently running process."""
+class ShowProcess(gdb.Function):
+    """Return address of process of given pid (default current process)."""
 
     def __init__(self):
-        super().__init__('process')
+        super().__init__('proc')
 
-    def invoke(self):
-        return Process.current()
+    def invoke(self, pid=-1):
+        if pid == -1:
+            return Process.current()
+        p = Process.from_pid(pid)
+        if p:
+            return p.address()
+        print(f"No process of pid={pid}")
+        return 0

@@ -2,7 +2,7 @@
 #define _SYS_VM_H_
 
 #include <sys/types.h>
-#include <sys/queue.h>
+#include <sys/newqueue.h>
 #include <machine/vm_param.h>
 
 #ifdef _KERNEL

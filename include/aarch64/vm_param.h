@@ -3,6 +3,7 @@
 
 #define PAGESIZE 4096
 #define SUPERPAGESIZE (1 << 21) /* 2 MB */
+#define PAGE_SHIFT 12
 
 #define KERNEL_SPACE_BEGIN 0xffff000000000000L
 #define KERNEL_SPACE_END 0xffffffffffffffffL

@@ -8,6 +8,7 @@
 void wait_for_child_exit(int pid, int exit_code) {
   int status;
   assert(waitpid(pid, &status, 0) == pid);
+  //printf("Child %d status: %d\n", pid, status);
   assert(WIFEXITED(status));
   assert(WEXITSTATUS(status) == exit_code);
 }

@@ -215,6 +215,8 @@ static vm_page_t *pm_take_page(size_t fl) {
   page->flags &= ~PG_MANAGED;
   for (unsigned j = 0; j < page->size; j++)
     page[j].flags |= PG_ALLOCATED;
+  assert(TAILQ_EMPTY(&page->pv_list));
+  klog("Taking page %p", page);
   return page;
 }
 
@@ -312,6 +314,7 @@ static void pm_free_from_seg(vm_physseg_t *seg, vm_page_t *page) {
 
 static void vm_page_free_nolock(vm_page_t *pg) {
   klog("%s: free %lx of size %ld", __func__, pg->paddr, pg->size);
+  assert(TAILQ_EMPTY(&pg->pv_list));
 
   vm_physseg_t *seg = NULL;
   TAILQ_FOREACH (seg, &seglist, seglink) {

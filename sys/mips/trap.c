@@ -129,8 +129,8 @@ static void tlb_exception_handler(ctx_t *ctx) {
   int code = exc_code(ctx);
   vaddr_t vaddr = _REG(ctx, BADVADDR);
 
-  klog("%s at $%08x, caused by reference to $%08lx!", exceptions[code],
-       _REG(ctx, EPC), vaddr);
+  //klog("%s at $%08x, caused by reference to $%08lx!", exceptions[code],
+  //     _REG(ctx, EPC), vaddr);
 
   pmap_t *pmap = pmap_lookup(vaddr);
   if (!pmap) {
@@ -143,7 +143,7 @@ static void tlb_exception_handler(ctx_t *ctx) {
   if (error == 0)
     return;
 
-  if (error == EACCES || error == EINVAL)
+  if (error == EINVAL)
     goto fault;
 
   vm_map_t *vmap = vm_map_lookup(vaddr);
@@ -155,6 +155,7 @@ static void tlb_exception_handler(ctx_t *ctx) {
   if (vm_page_fault(vmap, vaddr, access) == 0)
     return;
 
+  klog("Page fault not handled.");
 fault:
   if (td->td_onfault) {
     /* handle copyin / copyout faults */
@@ -211,6 +212,7 @@ static void user_trap_handler(ctx_t *ctx) {
     case EXC_CPU:
       cp_id = (_REG(ctx, CAUSE) & CR_CEMASK) >> CR_CESHIFT;
       if (cp_id != 1) {
+        klog("SIGILL on %p", _REG(ctx, EPC));
         sig_trap(ctx, SIGILL);
       } else {
         /* Enable FPU for interrupted context. */
@@ -220,6 +222,7 @@ static void user_trap_handler(ctx_t *ctx) {
       break;
 
     case EXC_RI:
+      klog("SIGILL on %p", _REG(ctx, EPC));
       sig_trap(ctx, SIGILL);
       break;
 

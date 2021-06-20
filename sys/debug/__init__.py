@@ -5,7 +5,7 @@ from .kdump import Kdump
 from .kgmon import Kgmon
 from .klog import Klog
 from .ktrace import Ktrace
-from .proc import Kprocess, Process, CurrentProcess
+from .proc import Kprocess, Process, ShowProcess
 from .struct import BinTime
 from .sync import CondVar, Mutex
 from .thread import Kthread, Thread, CurrentThread
@@ -35,7 +35,7 @@ Kgmon()
 
 # Functions
 CurrentThread()
-CurrentProcess()
+ShowProcess()
 
 # Events
 gdb.events.stop.connect(stop_handler)

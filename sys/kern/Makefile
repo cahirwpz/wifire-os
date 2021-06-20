@@ -62,6 +62,8 @@ SOURCES = \
 	uart_tty.c \
 	uio.c \
 	ustack.c \
+	vm_amap.c \
+	vm_anon.c \
 	vfs.c \
 	vfs_name.c \
 	vfs_readdir.c \

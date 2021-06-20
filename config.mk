@@ -24,6 +24,6 @@ endif
 VERBOSE ?= 0
 CLANG ?= 0
 LOCKDEP ?= 0
-KASAN ?= 0
+KASAN ?= 1
 KGPROF ?= 0
 KCSAN ?= 0

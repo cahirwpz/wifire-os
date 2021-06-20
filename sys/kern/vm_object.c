@@ -88,12 +88,12 @@ void vm_object_hold(vm_object_t *obj) {
 }
 
 void vm_object_drop(vm_object_t *obj) {
-  WITH_MTX_LOCK (&obj->vo_lock) {
-    if (!refcnt_release(&obj->vo_refs))
-      return;
+  if (!refcnt_release(&obj->vo_refs))
+    return;
 
+  WITH_MTX_LOCK (&obj->vo_lock)
     vm_object_remove_all_pages(obj);
-  }
+
   pool_free(P_VMOBJ, obj);
 }
 

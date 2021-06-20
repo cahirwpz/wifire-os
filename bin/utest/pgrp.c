@@ -215,12 +215,14 @@ int test_killpg_other_group(void) {
         assert(!sig_delivered);
         exit(0); // process c
       }
+      //printf("Grandchild: %d\n", pid_c);
 
       wait_for_child_exit(pid_c, 0);
       /* Process b should receive signal from process c. */
       assert(sig_delivered);
       exit(0); // process b
     }
+    //printf("Child: %d\n", pid_b);
 
     wait_for_child_exit(pid_b, 0);
     /* Process a should receive signal from process c. */

@@ -10,8 +10,10 @@ typedef struct vm_map vm_map_t;
 typedef struct vm_map_entry vm_map_entry_t;
 
 typedef enum {
-  VM_ENT_SHARED = 1,  /* shared memory */
-  VM_ENT_PRIVATE = 2, /* private memory (default) */
+  VM_ENT_SHARED = 1,   /* shared memory */
+  VM_ENT_PRIVATE = 2,  /* private memory (default) */
+  VM_ENT_COW = 4,      /* copy on write */
+  VM_ENT_NEEDSCPY = 8, /* amap needs copy */
 } vm_entry_flags_t;
 
 /*! \brief Called during kernel initialization. */
@@ -43,6 +45,8 @@ void vm_map_delete(vm_map_t *vm_map);
 
 vm_map_entry_t *vm_map_entry_alloc(vm_object_t *obj, vaddr_t start, vaddr_t end,
                                    vm_prot_t prot, vm_entry_flags_t flags);
+vm_map_entry_t *vm_map_entry_split(vm_map_t *map, vm_map_entry_t *ent,
+                                   vaddr_t splitat);
 void vm_map_entry_destroy(vm_map_t *map, vm_map_entry_t *ent);
 void vm_map_entry_destroy_range(vm_map_t *map, vm_map_entry_t *ent,
                                 vaddr_t start, vaddr_t end);

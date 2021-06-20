@@ -4,6 +4,7 @@ from .struct import TailQueue
 from .cmd import UserCommand
 from .cpu import TLBLo
 from .utils import TextTable, global_var, cast
+from .proc import Process
 
 
 PM_NQUEUES = 16
@@ -81,19 +82,124 @@ class VmMapSeg(UserCommand):
 
     def __call__(self, args):
         args = args.strip()
-        if args not in ['user', 'kernel']:
-            print('Choose either "user" or "kernel" vm_map!')
-            return
-        vm_map = gdb.parse_and_eval('vm_map_%s()' % args)
-        if vm_map == 0:
-            print('No active %s vm_map!' % args)
-            return
+        if len(args) == 0:
+            vm_map = gdb.parse_and_eval('vm_map_user()')
+            if vm_map == 0:
+                print('No active user vm_map!')
+                return
+        else:
+            pid = int(args)
+            proc = Process.from_pid(pid)
+            if proc is None:
+                print(f'No process of pid {pid}!')
+                return
+            vm_map = proc.vm_map()
+
         entries = vm_map['entries']
         table = TextTable(types='itttttt', align='rrrrrrr')
         table.header(['segment', 'start', 'end', 'prot', 'flags', 'object',
-                      'offset'])
+                      'amap'])
         segments = TailQueue(entries, 'link')
         for idx, seg in enumerate(segments):
             table.add_row([idx, seg['start'], seg['end'], seg['prot'],
-                           seg['flags'], seg['object'], seg['offset']])
+                           seg['flags'], seg['object'],
+                           seg['aref']['ar_amap']])
+        print(table)
+
+
+def print_entry(ent):
+    table = TextTable(types='tttttttt', align='rrrrrrrr')
+    table.header(['start', 'end', 'prot', 'flags', 'object', 'offset', 'amap',
+                  'amap offset'])
+    table.add_row([ent['start'], ent['end'], ent['prot'], ent['flags'],
+                   ent['object'], ent['offset'], ent['aref']['ar_amap'],
+                   ent['aref']['ar_pageoff']])
+    print(table)
+
+
+def print_addr_in_object(ent, address):
+    offset = ent['offset'] + address - ent['start']
+    obj_addr = ent['object']
+    page = gdb.parse_and_eval(f'vm_object_find_page({obj_addr}, {offset})')
+    if page == 0x0:
+        print(f'There is no page for address {hex(address)} in vm_object')
+        return
+    obj = obj_addr.dereference()
+    print(f'Page found in object ({obj_addr}):\n{obj}')
+
+
+def print_addr_in_amap(ent, address):
+    print('There is amap {} with offset {}'.format(
+        ent["aref"]["ar_amap"], ent["aref"]["ar_pageoff"]))
+    aref_addr = ent['aref'].address
+    offset = address - ent['start']
+    anon_addr = gdb.parse_and_eval(f'vm_amap_lookup({aref_addr}, {offset})')
+    if anon_addr == 0x0:
+        print(f'There is no anon for address {hex(address)} in amap.')
+        return
+    anon = anon_addr.dereference()
+    print(f'Page found in anon ({anon_addr}):\n{anon}')
+
+
+class VmAddress(UserCommand):
+    """List all information about addres in given vm_map"""
+
+    def __init__(self):
+        super().__init__('vm_address')
+
+    def __call__(self, args):
+        args = args.split()
+
+        if len(args) < 2:
+            print("Please give pid and address")
+            return
+
+        pid = int(args[0])
+        address = int(args[1], 16)
+
+        proc = Process.from_pid(pid)
+        if proc is None:
+            print(f'No process of pid {pid}!')
+            return
+
+        PAGESHIFT = 12
+        entries = TailQueue(proc.vm_map()['entries'], 'link')
+        for ent in entries:
+            if address >= ent['start'] and address < ent['end']:
+                print(f'Address in entry {ent.address}')
+                print_entry(ent)
+                # align address
+                address = (address >> PAGESHIFT) << PAGESHIFT
+                obj = ent['object']
+                if obj != 0:
+                    print_addr_in_object(ent, address)
+                amap = ent['aref']['ar_amap']
+                if amap != 0:
+                    print_addr_in_amap(ent, address)
+                return
+        print(f'Adress not found in process {pid} address space.')
+
+
+class VmAmap(UserCommand):
+    """Show amap that resides on given address."""
+
+    def __init__(self):
+        super().__init__('vm_amap')
+
+    def __call__(self, args):
+        print('"', args, '"')
+        address = int(args.strip(), 16)
+
+        amap = gdb.parse_and_eval(f'*(vm_amap_t *){address}')
+        print('Amap has {} references and uses {}/{} anons.'.format(
+            int(amap["am_ref"]), int(amap["am_nused"]), int(amap["am_nslot"])))
+
+        table = TextTable(types='tttt', align='rrrr')
+        table.header(['slot', 'anon', 'refs', 'page'])
+        for i in range(amap['am_nslot']):
+            anon_addr = amap['am_anon'][i]
+            if anon_addr == 0:
+                continue
+            anon = anon_addr.dereference()
+            table.add_row([i, anon_addr, anon['an_ref'], anon['an_page']])
         print(table)

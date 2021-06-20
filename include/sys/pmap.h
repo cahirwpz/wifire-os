@@ -77,6 +77,8 @@ pmap_t *pmap_lookup(vaddr_t va);
 pmap_t *pmap_kernel(void);
 pmap_t *pmap_user(void);
 
+int pmap_get_asid(pmap_t *pmap);
+
 void pmap_growkernel(vaddr_t maxkvaddr);
 
 #endif /* !_SYS_PMAP_H_ */

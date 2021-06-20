@@ -4,10 +4,13 @@
 #include <sys/vm_pager.h>
 #include <sys/vm_object.h>
 #include <sys/vm_map.h>
+#include <sys/vm_amap.h>
+#include <sys/vm_anon.h>
 #include <sys/errno.h>
 #include <sys/thread.h>
 #include <sys/ktest.h>
 #include <sys/sched.h>
+#include <machine/vm_param.h>
 
 #ifdef __mips__
 #define TOO_MUCH 0x40000000
@@ -160,5 +163,78 @@ static int findspace_demo(void) {
   return KTEST_SUCCESS;
 }
 
+#define START_ADDR (1 * PAGESIZE + USER_SPACE_BEGIN)
+#define END_ADDR (20 * PAGESIZE + USER_SPACE_BEGIN)
+
+/* I wish we can make test without definition, but we need it to specify amap
+ * for entry. */
+typedef struct vm_map_entry {
+  TAILQ_ENTRY(vm_map_entry) link;
+  vm_object_t *object;
+  vm_aref_t aref;
+  vm_prot_t prot;
+  vm_entry_flags_t flags;
+  vaddr_t start;
+  vaddr_t end;
+} vm_map_entry_t;
+
+static int test_entry_amap(void) {
+  vm_map_t *map = vm_map_new();
+
+  vm_map_entry_t *e1 = vm_map_entry_alloc(
+    NULL, START_ADDR, END_ADDR, VM_PROT_READ | VM_PROT_WRITE, VM_ENT_PRIVATE);
+  vm_map_insert(map, e1, VM_FIXED);
+
+  vm_amap_t *amap1 = vm_amap_alloc();
+  e1->aref = (vm_aref_t){.ar_pageoff = 0, .ar_amap = amap1};
+
+  vm_anon_t *an1 = vm_anon_alloc();
+  vm_anon_t *an2 = vm_anon_alloc();
+  vm_anon_t *an3 = vm_anon_alloc();
+  vm_anon_t *an4 = vm_anon_alloc();
+
+  an1->an_page = (vm_page_t *)1;
+  an2->an_page = (vm_page_t *)2;
+  an3->an_page = (vm_page_t *)3;
+  an4->an_page = (vm_page_t *)4;
+
+  vm_amap_add(&e1->aref, an1, 3 * PAGESIZE);
+  vm_amap_add(&e1->aref, an2, 7 * PAGESIZE);
+  vm_amap_add(&e1->aref, an3, 13 * PAGESIZE);
+  vm_amap_add(&e1->aref, an4, 15 * PAGESIZE);
+
+  vm_map_entry_t *e2;
+  WITH_VM_MAP_LOCK (map)
+    e2 = vm_map_entry_split(map, e1, START_ADDR + 10 * PAGESIZE);
+
+  assert(e1->aref.ar_amap == e2->aref.ar_amap);
+  klog("E1: %d E2: %d", e1->aref.ar_pageoff, e2->aref.ar_pageoff);
+  assert(e1->aref.ar_pageoff == 0 && e2->aref.ar_pageoff == 10);
+  assert(amap1->am_ref == 2);
+
+  klog("E1: %ld - %ld | E2: %ld - %ld", e1->start, e1->end, e2->start, e2->end);
+  assert(e1->start == START_ADDR && e1->end == START_ADDR + 10 * PAGESIZE);
+  assert(e2->start == START_ADDR + 10 * PAGESIZE && e2->end == END_ADDR);
+
+  WITH_VM_MAP_LOCK (map) {
+    klog("found1: %p e1: %p", vm_map_find_entry(map, 7 * PAGESIZE + START_ADDR),
+         e1);
+    klog("found2: %p e2: %p",
+         vm_map_find_entry(map, 15 * PAGESIZE + START_ADDR), e2);
+    assert(vm_map_find_entry(map, 7 * PAGESIZE + START_ADDR) == e1);
+    assert(vm_map_find_entry(map, 15 * PAGESIZE + START_ADDR) == e2);
+  }
+
+  /* To safe removial of this artificial vm_space */
+  an1->an_page = (vm_page_t *)0;
+  an2->an_page = (vm_page_t *)0;
+  an3->an_page = (vm_page_t *)0;
+  an4->an_page = (vm_page_t *)0;
+
+  vm_map_delete(map);
+  return KTEST_SUCCESS;
+}
+
 KTEST_ADD(vm, paging_on_demand_and_memory_protection_demo, 0);
 KTEST_ADD(findspace, findspace_demo, 0);
+KTEST_ADD(vm_entry_amap, test_entry_amap, 0);
