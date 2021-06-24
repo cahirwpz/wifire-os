@@ -169,10 +169,6 @@ void tm_trigger(timer_t *tm) {
   tm->tm_event_cb(tm, tm->tm_arg);
 }
 
-void tm_select(timer_t *tm) {
-  time_source = tm;
-}
-
 bintime_t binuptime(void) {
   /* XXX: probably a race condition here */
   timer_t *tm = time_source;

@@ -52,7 +52,7 @@ static int set_next_tick(mips_timer_state_t *state) {
   /* calculate next value of compare register based on timer period */
   do {
     state->compare.val += state->period_cntr;
-    mips32_set_c0(C0_COMPARE, state->compare.lo);
+    mips32_setcompare(state->compare.lo);
     (void)read_count(state);
     ticks++;
   } while (state->compare.val <= state->count.val);
@@ -74,26 +74,17 @@ static int mips_timer_start(timer_t *tm, unsigned flags, const bintime_t start,
   assert(flags & TMF_PERIODIC);
   assert(!(flags & TMF_ONESHOT));
 
-  mips32_setcount(0);
-
   device_t *dev = tm->tm_priv;
   mips_timer_state_t *state = dev->state;
-  state->sec = 0;
-  state->cntr_modulo = 0;
-  state->last_count_lo = 0;
   state->period_cntr = bintime_mul(period, tm->tm_frequency).sec;
   state->compare.val = read_count(state);
 
   set_next_tick(state);
-  bus_intr_setup(dev, state->irq_res, mips_timer_intr, NULL, dev,
-                 "MIPS CPU timer");
   return 0;
 }
 
-static int mips_timer_stop(timer_t *tm) {
-  device_t *dev = tm->tm_priv;
-  mips_timer_state_t *state = dev->state;
-  bus_intr_teardown(dev, state->irq_res);
+static inline int mips_timer_stop(timer_t *tm) {
+  mips32_setcompare(0xffffffff);
   return 0;
 }
 
@@ -119,7 +110,14 @@ static int mips_timer_probe(device_t *dev) {
 static int mips_timer_attach(device_t *dev) {
   mips_timer_state_t *state = dev->state;
 
+  mips32_setcount(0);
+
+  state->sec = 0;
+  state->cntr_modulo = 0;
+  state->last_count_lo = 0;
   state->irq_res = device_take_irq(dev, 0, RF_ACTIVE);
+
+  mips_timer_stop(&state->timer);
 
   state->timer = (timer_t){
     .tm_name = "mips-cpu-timer",
@@ -135,6 +133,9 @@ static int mips_timer_attach(device_t *dev) {
   };
 
   tm_register(&state->timer);
+
+  bus_intr_setup(dev, state->irq_res, mips_timer_intr, NULL, dev,
+                 "MIPS CPU timer");
 
   return 0;
 }

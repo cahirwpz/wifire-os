@@ -103,22 +103,19 @@ static int timer_pit_start(timer_t *tm, unsigned flags, const bintime_t start,
   /* Maximal counter value which we can store in pit timer */
   assert(counter <= 0xFFFF);
 
-  pit->sec = 0;
-  pit->ticks = 0;
-  pit->prev_ticks16 = 0;
   pit->period_ticks = counter;
-  pit->noticed_overflow = false;
 
   pit_set_frequency(pit);
 
-  bus_intr_setup(dev, pit->irq_res, pit_intr, NULL, pit, "i8254 timer");
   return 0;
 }
 
 static int timer_pit_stop(timer_t *tm) {
   device_t *dev = device_of(tm);
   pit_state_t *pit = dev->state;
-  bus_intr_teardown(dev, pit->irq_res);
+
+  outb(TIMER_MODE, TIMER_SEL0 | TIMER_16BIT | TIMER_ONESHOT);
+
   return 0;
 }
 
@@ -142,6 +139,10 @@ static int pit_attach(device_t *dev) {
   pit->regs = device_take_ioports(dev, 0, RF_ACTIVE);
   assert(pit->regs != NULL);
 
+  pit->sec = 0;
+  pit->ticks = 0;
+  pit->prev_ticks16 = 0;
+  pit->noticed_overflow = false;
   pit->irq_res = device_take_irq(dev, 0, RF_ACTIVE);
 
   pit->timer = (timer_t){
@@ -157,7 +158,11 @@ static int pit_attach(device_t *dev) {
     .tm_priv = dev,
   };
 
+  timer_pit_stop(&pit->timer);
+
   tm_register(&pit->timer);
+
+  bus_intr_setup(dev, pit->irq_res, pit_intr, NULL, pit, "i8254 timer");
 
   return 0;
 }

@@ -81,9 +81,6 @@ int tm_stop(timer_t *tm);
 /*! \brief Used by interrupt filter routine to trigger a callback. */
 void tm_trigger(timer_t *tm);
 
-/*! \brief Select timer used as a main time source (for binuptime, etc.) */
-void tm_select(timer_t *tm);
-
 #endif /* !_KERNEL */
 
 #endif /* !_SYS_TIMER_H_ */

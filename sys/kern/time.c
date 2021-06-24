@@ -128,7 +128,7 @@ time_t tm2sec(tm_t *t) {
   const int32_t year_scale_s = 31536000, day_scale_s = 86400,
                 hour_scale_s = 3600, min_scale_s = 60;
   time_t res = 0;
-  static const int month_in_days[13] = {0,   31,  59,  90,  120, 151,
+  static const int month_in_days[12] = {0,   31,  59,  90,  120, 151,
                                         181, 212, 243, 273, 304, 334};
 
   res += (time_t)month_in_days[t->tm_mon] * day_scale_s;
