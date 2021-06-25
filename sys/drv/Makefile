@@ -27,9 +27,12 @@ SOURCES-MIPS = \
 	usb.c
 
 SOURCES-AARCH64 = \
+	bcm2835_emmc.c \
 	bcm2835_gpio.c \
 	bcm2835_rootdev.c \
-	pl011.c
+	emmc.c \
+	pl011.c \
+	sdcard.c
 
 CPPFLAGS += -D_MACHDEP
 

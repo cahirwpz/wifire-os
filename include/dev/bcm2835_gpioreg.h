@@ -65,6 +65,7 @@
 /* The high level detect enable registers define the pins for which a high
  * level sets a bit in the event detect status register GPEDS. */
 #define BCM2835_GPIO_GPHEN(x) (0x064 + (x) * sizeof(uint32_t))
+#define BCM2835_GPIO_GPHEN_PINS_PER_REGISTER 32
 
 /* The low level detect enable registers define the pins for which a low level
  * sets a bit in the event detect status register GPEDS. */

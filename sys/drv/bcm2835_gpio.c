@@ -2,7 +2,7 @@
 #include <sys/rman.h>
 #include <sys/bus.h>
 #include <dev/bcm2835reg.h>
-#include <dev/bcm2835_gpioreg.h>
+#include <dev/bcm2835_gpio.h>
 
 /*
  * \brief delay function
@@ -19,10 +19,15 @@ static void delay(int64_t count) {
   __asm__ volatile("1: subs %[count], %[count], #1; bne 1b"
                    : [ count ] "+r"(count));
 }
+
+#define NGPIO_PIN 54
+
 /* clang-format on */
 
 void bcm2835_gpio_function_select(resource_t *r, unsigned pin,
                                   bcm2835_gpio_func_t func) {
+  assert(pin < NGPIO_PIN);
+
   unsigned mask = (1 << BCM2835_GPIO_GPFSEL_BITS_PER_PIN) - 1;
   unsigned reg = pin / BCM2835_GPIO_GPFSEL_PINS_PER_REGISTER;
   unsigned shift = (pin % BCM2835_GPIO_GPFSEL_PINS_PER_REGISTER) *
@@ -33,8 +38,6 @@ void bcm2835_gpio_function_select(resource_t *r, unsigned pin,
   val |= (func << shift);
   bus_write_4(r, BCM2835_GPIO_GPFSEL(reg), val);
 }
-
-#define NGPIO_PIN 28
 
 void bcm2835_gpio_set_pull(resource_t *r, unsigned pin,
                            bcm2838_gpio_gppud_t pud) {
@@ -53,4 +56,18 @@ void bcm2835_gpio_set_pull(resource_t *r, unsigned pin,
   delay(150);
   bus_write_4(r, BCM2835_GPIO_GPPUD, BCM2838_GPIO_GPPUD_PULLOFF);
   bus_write_4(r, BCM2835_GPIO_GPPUDCLK(reg), 0);
+}
+
+void bcm2835_gpio_set_high_detect(resource_t *r, unsigned pin, bool enable) {
+  assert(pin < NGPIO_PIN);
+
+  unsigned mask = 1 << (pin % BCM2835_GPIO_GPHEN_PINS_PER_REGISTER);
+  unsigned reg = pin / BCM2835_GPIO_GPHEN_PINS_PER_REGISTER;
+
+  uint32_t val = bus_read_4(r, BCM2835_GPIO_GPHEN(reg));
+  if (enable)
+    val |= mask;
+  else
+    val &= ~mask;
+  bus_write_4(r, BCM2835_GPIO_GPHEN(reg), val);
 }

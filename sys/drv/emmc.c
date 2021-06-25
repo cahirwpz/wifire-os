@@ -1,11 +1,7 @@
 #include <sys/devclass.h>
 #include <dev/emmc.h>
 
-/* An ugly fix, but I don't know if we can do better with current build system
- */
-#if BOARD==rpi3
 DEVCLASS_CREATE(emmc);
-#endif
 
 /* Some of these might contain incorrect flags. Please, if you are implementing
  * a driver for a new e.MMC device, check the configuration here and ensure
@@ -34,15 +30,18 @@ const emmc_cmd_t default_emmc_commands[57] = {
   [EMMC_CMD_GO_INACTIVE_STATE] = {EMMC_CMD_GO_INACTIVE_STATE, 0, EMMCRESP_NONE},
   [EMMC_CMD_BUSTEST_W] = {EMMC_CMD_BUSTEST_W, 0, EMMCRESP_R1},
   [EMMC_CMD_SET_BLOCKLEN] = {EMMC_CMD_SET_BLOCKLEN, 0, EMMCRESP_R1},
-  [EMMC_CMD_READ_BLOCK] = {EMMC_CMD_READ_BLOCK, EMMC_F_DATA, EMMCRESP_R1},
-  [EMMC_CMD_READ_MULTIPLE_BLOCKS] = {EMMC_CMD_READ_MULTIPLE_BLOCKS, EMMC_F_DATA,
+  [EMMC_CMD_READ_BLOCK] = {EMMC_CMD_READ_BLOCK, EMMC_F_DATA_READ, EMMCRESP_R1},
+  [EMMC_CMD_READ_MULTIPLE_BLOCKS] = {EMMC_CMD_READ_MULTIPLE_BLOCKS,
+                                     EMMC_F_DATA_READ | EMMC_F_DATA_MULTI,
                                      EMMCRESP_R1},
   [EMMC_CMD_WRITE_DAT_UNTIL_STOP] = {EMMC_CMD_WRITE_DAT_UNTIL_STOP, 0,
                                      EMMCRESP_R1},
   [EMMC_CMD_SET_BLOCK_COUNT] = {EMMC_CMD_SET_BLOCK_COUNT, 0, EMMCRESP_R1},
-  [EMMC_CMD_WRITE_BLOCK] = {EMMC_CMD_WRITE_BLOCK, EMMC_F_DATA, EMMCRESP_R1},
+  [EMMC_CMD_WRITE_BLOCK] = {EMMC_CMD_WRITE_BLOCK, EMMC_F_DATA_WRITE,
+                            EMMCRESP_R1},
   [EMMC_CMD_WRITE_MULTIPLE_BLOCKS] = {EMMC_CMD_WRITE_MULTIPLE_BLOCKS,
-                                      EMMC_F_DATA, EMMCRESP_R1},
+                                      EMMC_F_DATA_WRITE | EMMC_F_DATA_MULTI,
+                                      EMMCRESP_R1},
   [EMMC_CMD_PROGRAM_CID] = {EMMC_CMD_PROGRAM_CID, 0, EMMCRESP_R1},
   [EMMC_CMD_PROGRAM_CSD] = {EMMC_CMD_PROGRAM_CSD, 0, EMMCRESP_R1},
   [EMMC_CMD_SET_WRITE_PROT] = {EMMC_CMD_SET_WRITE_PROT, 0, EMMCRESP_R1},
