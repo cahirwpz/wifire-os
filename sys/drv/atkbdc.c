@@ -173,7 +173,7 @@ static void evdev_init(atkbdc_state_t *atkbdc) {
   /* Key repetition are also supported. */
   evdev_support_event(evdev, EV_REP);
   /* Mark all AT-compatible keys as supported. */
-  evdev_support_all_known_keys(evdev);
+  evdev_atkbd_support_all_known_keys(evdev);
 
   /* Bind evdev to atkbdc state for future references. */
   atkbdc->evdev = evdev;

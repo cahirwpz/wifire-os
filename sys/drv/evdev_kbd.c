@@ -83,8 +83,19 @@ static uint16_t evdev_usb_scancodes[256] = {
 };
 /* clang-format on */
 
+uint16_t evdev_mod2key(uint8_t modnum) {
+  return evdev_usb_scancodes[modnum + 0xe0];
+}
+
 uint16_t evdev_hid2key(int scancode) {
   return evdev_usb_scancodes[scancode];
+}
+
+void evdev_hidkbd_support_all_known_keys(evdev_dev_t *evdev) {
+  size_t nitems = sizeof(evdev_usb_scancodes) / sizeof(uint16_t);
+  for (size_t i = KEY_RESERVED; i < nitems; i++)
+    if (evdev_usb_scancodes[i] != NONE)
+      evdev_support_key(evdev, evdev_usb_scancodes[i]);
 }
 
 /*
@@ -213,7 +224,7 @@ uint16_t evdev_scancode2key(int *statep, int scancode) {
   return keycode;
 }
 
-void evdev_support_all_known_keys(evdev_dev_t *evdev) {
+void evdev_atkbd_support_all_known_keys(evdev_dev_t *evdev) {
   size_t nitems = sizeof(evdev_at_set1_scancodes) / sizeof(uint16_t);
   for (size_t i = KEY_RESERVED; i < nitems; i++)
     if (evdev_at_set1_scancodes[i] != NONE)
