@@ -57,9 +57,12 @@ MTX_DEFINE(vm_kernel_end_lock, 0);
 
 static void *vm_boot_alloc(size_t n) {
   assert(!vm_boot_done);
+  assert(page_aligned_p(vm_kernel_end));
 
-  void *begin = align((void *)vm_kernel_end, sizeof(long));
-  void *end = align(begin + n, PAGESIZE);
+  n = roundup(n, PAGESIZE);
+
+  void *begin = (void *)vm_kernel_end;
+  void *end = begin + n;
 #if KASAN
   /* We're not ready to call kasan_grow() yet, so this function could
    * potentially make vm_kernel_end go past _kernel_sanitized_end, which could
@@ -77,25 +80,32 @@ static void *vm_boot_alloc(size_t n) {
 
   assert(seg != NULL);
 
-  for (void *va = align(begin, PAGESIZE); va < end; va += PAGESIZE) {
+  for (void *va = begin; va < end; va += PAGESIZE) {
     paddr_t pa = seg->start;
     seg->start += PAGESIZE;
     if (--seg->npages == 0) {
+      assert(seg->start == seg->end);
       TAILQ_REMOVE(&seglist, seg, seglink);
-      seg = TAILQ_FIRST(&seglist);
+      /* The segment should service the whole request. */
+      seg = NULL;
     }
 
     pmap_kenter((vaddr_t)va, pa, VM_PROT_READ | VM_PROT_WRITE, 0);
   }
 
-  vm_kernel_end += n;
+  vm_kernel_end = (vaddr_t)end;
 
   return begin;
 }
 
 static void vm_boot_finish(void) {
-  vm_kernel_end = (vaddr_t)align((void *)vm_kernel_end, PAGESIZE);
   vm_boot_done = true;
+}
+
+static inline size_t pg_compute_size(paddr_t pa) {
+  /* Take the highest number of the form 2^k * PAGESIZE
+   * that divides the physical address of a page. */
+  return 1 << min(PM_NQUEUES - 1, ctz(pa / PAGESIZE));
 }
 
 void init_vm_page(void) {
@@ -106,8 +116,10 @@ void init_vm_page(void) {
 
   /* Allocate contiguous array of vm_page_t to cover all physical memory. */
   size_t npages = 0;
-  TAILQ_FOREACH (seg, &seglist, seglink)
+  TAILQ_FOREACH (seg, &seglist, seglink) {
+    assert(seg->npages);
     npages += seg->npages;
+  }
 
   vm_page_t *pages = vm_boot_alloc(npages * sizeof(vm_page_t));
   bzero(pages, npages * sizeof(vm_page_t));
@@ -117,9 +129,17 @@ void init_vm_page(void) {
     for (unsigned i = 0; i < seg->npages; i++) {
       vm_page_t *page = &pages[i];
       paddr_t pa = seg->start + i * PAGESIZE;
-      unsigned size = 1 << min(PM_NQUEUES - 1, ctz(pa / PAGESIZE));
-      if (pa + size * PAGESIZE > seg->end)
-        size = 1 << min(PM_NQUEUES - 1, log2((seg->end ^ pa) / PAGESIZE));
+      size_t size = pg_compute_size(pa);
+      if (pa + size * PAGESIZE > seg->end) {
+        /* Here:
+         *
+         *    pa    = 2^(k+1) * A + 2^k
+         * seg->end = 2^(k+1) * A + 2^k + B
+         *
+         * Let's just restrict to B (this ensures that we won't get beyond the
+         * segment while page->size * PAGESIZE still divides page->paddr). */
+        size = pg_compute_size(seg->end ^ pa);
+      }
       page->paddr = pa;
       page->size = size;
       page->flags = seg->used ? PG_ALLOCATED : 0;
@@ -144,7 +164,7 @@ void init_vm_page(void) {
   vm_boot_finish();
 }
 
-/* Takes two pages which are buddies, and merges them */
+/* Takes two pages which are buddies, and merges them. */
 static vm_page_t *pm_merge_buddies(vm_page_t *pg1, vm_page_t *pg2) {
   assert(pg1->size == pg2->size);
 
@@ -163,11 +183,11 @@ static vm_page_t *pm_find_buddy(vm_physseg_t *seg, vm_page_t *pg) {
   assert(powerof2(pg->size));
 
   /* When page address is divisible by (2 * size) then:
-   * look at left buddy, otherwise look at right buddy */
-  if ((pg - seg->pages) % (2 * pg->size) == 0)
-    buddy += pg->size;
-  else
+   * look at right buddy, otherwise look at left buddy. */
+  if (pg->paddr & (pg->size * PAGESIZE))
     buddy -= pg->size;
+  else
+    buddy += pg->size;
 
   intptr_t index = buddy - seg->pages;
 
@@ -180,6 +200,8 @@ static vm_page_t *pm_find_buddy(vm_physseg_t *seg, vm_page_t *pg) {
   if (!(buddy->flags & PG_MANAGED))
     return NULL;
 
+  assert(!(buddy->flags & PG_ALLOCATED));
+
   return buddy;
 }
 
@@ -191,7 +213,8 @@ static void pm_split_page(size_t fl) {
   size_t size = page->size / 2;
   vm_page_t *buddy = page + size;
 
-  assert(!(buddy->flags & PG_ALLOCATED));
+  assert(size);
+  assert(!(buddy->flags & (PG_ALLOCATED | PG_MANAGED)));
 
   TAILQ_REMOVE(&freelist[fl], page, freeq);
   pagecount[fl]--;
@@ -265,7 +288,7 @@ int vm_pagelist_alloc(size_t n, vm_pagelist_t *pglist) {
   while (n > 0) {
     size_t prev_sum = fl > 0 ? sums[fl - 1] : 0;
 
-    /* Remaining part of the request can be satisfied with smaller pages? */
+    /* Can remaining part of the request be satisfied with smaller pages? */
     if (prev_sum >= n) {
       fl--;
       continue;
@@ -273,7 +296,7 @@ int vm_pagelist_alloc(size_t n, vm_pagelist_t *pglist) {
 
     size_t pgsz = 1 << fl;
 
-    /* Page is too large to satisfy remaining part of the request? */
+    /* Is page too large to satisfy remaining part of the request? */
     if (n < pgsz) {
       pm_split_page(fl);
       sums[--fl] += pgsz;
