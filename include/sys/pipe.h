@@ -10,7 +10,7 @@
 
 typedef struct proc proc_t;
 
-int do_pipe(proc_t *p, int fds[2]);
+int do_pipe2(proc_t *p, int fds[2], int flags);
 
 #endif /* !_KERNEL */
 

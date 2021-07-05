@@ -99,7 +99,6 @@ int do_fcntl(proc_t *p, int fd, int cmd, int arg, int *resp) {
   if ((error = fdtab_get_file(p->p_fdtable, fd, 0, &f)))
     return error;
 
-  /* TODO: Currently only F_DUPFD command is implemented. */
   bool cloexec = false;
   int flags = 0;
   switch (cmd) {

@@ -86,6 +86,8 @@ static int pipe_read(file_t *f, uio_t *uio) {
     if (ringbuf_empty(&producer->buf) && producer->closed)
       return 0;
 
+    if (f->f_flags & IO_NONBLOCK)
+      return EAGAIN;
     /* pipe empty, producer exists, wait for data */
     while (ringbuf_empty(&producer->buf) && !producer->closed) {
       /* restart the syscall if we were interrupted by a signal */
@@ -127,7 +129,10 @@ static int pipe_write(file_t *f, uio_t *uio) {
       /* nothing left to write? */
       if (uio->uio_resid == 0)
         return 0;
-      /* buffer is full so wait for some data to be consumed */
+      /* buffer is full, so if we write in NONBLOCK then return with error */
+      if (f->f_flags & IO_NONBLOCK)
+        return EAGAIN;
+      /* buffer is full, interruptly sleep while some data is consumed */
       if (cv_wait_intr(&producer->nonempty, &producer->mtx)) {
         res = ERESTARTSYS;
         break;
@@ -181,7 +186,7 @@ static file_t *make_pipe_file(pipe_end_t *end) {
   return file;
 }
 
-int do_pipe(proc_t *p, int fds[2]) {
+int do_pipe2(proc_t *p, int fds[2], int flags) {
   pipe_t *pipe = pipe_alloc();
   pipe_end_t *consumer = &pipe->end[0];
   pipe_end_t *producer = &pipe->end[1];
@@ -189,12 +194,18 @@ int do_pipe(proc_t *p, int fds[2]) {
   file_t *file0 = make_pipe_file(consumer);
   file_t *file1 = make_pipe_file(producer);
 
+  if (flags & O_NONBLOCK) {
+    file0->f_flags |= IO_NONBLOCK;
+    file1->f_flags |= IO_NONBLOCK;
+  }
+
+  int set_cloexec = flags & O_CLOEXEC;
   int error;
 
   if (!(error = fdtab_install_file(p->p_fdtable, file0, 0, &fds[0]))) {
     if (!(error = fdtab_install_file(p->p_fdtable, file1, 0, &fds[1]))) {
-      if (!(error = fd_set_cloexec(p->p_fdtable, fds[0], false)))
-        return fd_set_cloexec(p->p_fdtable, fds[1], false);
+      if (!(error = fd_set_cloexec(p->p_fdtable, fds[0], set_cloexec)))
+        return fd_set_cloexec(p->p_fdtable, fds[1], set_cloexec);
       fdtab_close_fd(p->p_fdtable, fds[1]);
     }
     fdtab_close_fd(p->p_fdtable, fds[0]);

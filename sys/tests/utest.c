@@ -185,3 +185,9 @@ UTEST_ADD_SIMPLE(procstat);
 
 UTEST_ADD_SIMPLE(pipe_parent_signaled);
 UTEST_ADD_SIMPLE(pipe_child_signaled);
+UTEST_ADD_SIMPLE(pipe_blocking_flag_manipulation);
+UTEST_ADD_SIMPLE(pipe_write_interruptible_sleep);
+UTEST_ADD_SIMPLE(pipe_write_errno_eagain);
+UTEST_ADD_SIMPLE(pipe_read_interruptible_sleep);
+UTEST_ADD_SIMPLE(pipe_read_errno_eagain);
+UTEST_ADD_SIMPLE(pipe_read_return_zero);
