@@ -149,9 +149,12 @@ static int devfs_fop_write(file_t *fp, uio_t *uio) {
 }
 
 static int devfs_fop_close(file_t *fp) {
+  int error;
   devnode_t *dev = fp->f_data;
   refcnt_release(&dev->refcnt);
-  return dev->ops->d_close(dev, fp);
+  error = dev->ops->d_close(dev, fp);
+  vnode_drop(fp->f_vnode);
+  return error;
 }
 
 static int devfs_fop_seek(file_t *fp, off_t offset, int whence,
