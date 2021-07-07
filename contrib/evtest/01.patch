@@ -1,0 +1,45 @@
+diff --git a/evtest.c b/evtest.c
+index 40bc82b..ea7b022 100644
+--- a/evtest.c
++++ b/evtest.c
+@@ -43,8 +43,9 @@
+ #include <config.h>
+ #endif
+ 
+-#include <linux/version.h>
+-#include <linux/input.h>
++#include <sys/input.h>
++#include <sys/ioctl.h>
++#include <sys/select.h>
+ 
+ #include <string.h>
+ #include <fcntl.h>
+@@ -112,6 +113,10 @@ static void interrupt_handler(int sig)
+ 	stop = 1;
+ }
+ 
++static const char *program_invocation_short_name;
++
++int versionsort(const struct dirent **, const struct dirent **);
++
+ /**
+  * Look up an entry in the query_modes table by its textual name.
+  *
+@@ -1057,7 +1062,7 @@ static int print_events(int fd)
+ 			type = ev[i].type;
+ 			code = ev[i].code;
+ 
+-			printf("Event: time %ld.%06ld, ", ev[i].time.tv_sec, ev[i].time.tv_usec);
++			printf("Event: time %lld.%06d, ", ev[i].time.tv_sec, ev[i].time.tv_usec);
+ 
+ 			if (type == EV_SYN) {
+ 				if (code == SYN_MT_REPORT)
+@@ -1258,6 +1263,8 @@ int main (int argc, char **argv)
+ 	const char *event_type;
+ 	enum evtest_mode mode = MODE_CAPTURE;
+ 
++	program_invocation_short_name = argv[0];
++
+ 	while (1) {
+ 		int option_index = 0;
+ 		int c = getopt_long(argc, argv, "", long_options, &option_index);
