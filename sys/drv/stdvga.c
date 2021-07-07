@@ -122,8 +122,8 @@ static int stdvga_set_fbinfo(stdvga_state_t *vga, fb_info_t *fb_info) {
   return 0;
 }
 
-static int stdvga_open(vnode_t *v, int mode, file_t *fp) {
-  stdvga_state_t *vga = devfs_node_data(v);
+static int stdvga_open(devnode_t *dev, file_t *fp, int oflags) {
+  stdvga_state_t *vga = dev->data;
   int error;
 
   /* Disallow opening the file more than once. */
@@ -131,38 +131,29 @@ static int stdvga_open(vnode_t *v, int mode, file_t *fp) {
   if (!atomic_compare_exchange_strong(&vga->usecnt, &expected, 1))
     return EBUSY;
 
-  /* On error, decrease the use count. */
-  if ((error = vnode_open_generic(v, mode, fp)))
-    goto fail;
-
-  if ((error = stdvga_set_fbinfo(vga, &vga->fb_info)))
-    goto fail;
+  if ((error = stdvga_set_fbinfo(vga, &vga->fb_info))) {
+    atomic_store(&vga->usecnt, 0);
+    return error;
+  }
 
   return 0;
-
-fail:
-  atomic_store(&vga->usecnt, 0);
-  return error;
 }
 
-static int stdvga_close(vnode_t *v, file_t *fp) {
-  stdvga_state_t *vga = devfs_node_data(v);
+static int stdvga_close(devnode_t *dev, file_t *fp) {
+  stdvga_state_t *vga = dev->data;
   atomic_store(&vga->usecnt, 0);
   return 0;
 }
 
-static int stdvga_write(vnode_t *v, uio_t *uio) {
-  stdvga_state_t *vga = devfs_node_data(v);
+static int stdvga_write(devnode_t *dev, uio_t *uio) {
+  stdvga_state_t *vga = dev->data;
   size_t size = FB_SIZE(&vga->fb_info);
-
-  /* This device does not support offsets. */
-  uio->uio_offset = 0;
 
   return uiomove_frombuf((void *)vga->mem->r_bus_handle, size, uio);
 }
 
-static int stdvga_ioctl(vnode_t *v, u_long cmd, void *data, file_t *fp) {
-  stdvga_state_t *vga = devfs_node_data(v);
+static int stdvga_ioctl(devnode_t *dev, u_long cmd, void *data, int fflags) {
+  stdvga_state_t *vga = dev->data;
 
   if (cmd == FBIOCGET_FBINFO) {
     memcpy(data, &vga->fb_info, sizeof(fb_info_t));
@@ -175,11 +166,12 @@ static int stdvga_ioctl(vnode_t *v, u_long cmd, void *data, file_t *fp) {
   return EINVAL;
 }
 
-static vnodeops_t stdvga_vnodeops = {
-  .v_open = stdvga_open,
-  .v_close = stdvga_close,
-  .v_write = stdvga_write,
-  .v_ioctl = stdvga_ioctl,
+static devops_t stdvga_devops = {
+  .d_type = DT_SEEKABLE,
+  .d_open = stdvga_open,
+  .d_close = stdvga_close,
+  .d_write = stdvga_write,
+  .d_ioctl = stdvga_ioctl,
 };
 
 static int stdvga_probe(device_t *dev) {
@@ -215,7 +207,7 @@ static int stdvga_attach(device_t *dev) {
   stdvga_vbe_set(vga, VBE_DISPI_INDEX_ENABLE, VBE_DISPI_ENABLED);
 
   /* Install /dev/vga device file. */
-  devfs_makedev(NULL, "vga", &stdvga_vnodeops, vga, NULL);
+  devfs_makedev_new(NULL, "vga", &stdvga_devops, vga, NULL);
 
   return 0;
 }

@@ -60,6 +60,7 @@ index d55b2fe..108d82a 100644
 +
  void I_FinishUpdate (void)
  {
++    lseek(vgafd, SEEK_SET, 0);
 +    write(vgafd, screens[0], SCREENWIDTH*SCREENHEIGHT);
      headless_count ++ ;
  }
