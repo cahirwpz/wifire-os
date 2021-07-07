@@ -88,6 +88,7 @@ typedef struct evdev_dev {
  * track of last EV_SYN position in `ec_buffer_ready`.
  */
 typedef struct evdev_client {
+  devnode_t ev_dev;                 /* (!) device node of this client */
   evdev_dev_t *ec_evdev;            /* (!) associated evdev device */
   LIST_ENTRY(evdev_client) ec_link; /* (s) link on client list */
 
@@ -323,8 +324,21 @@ static void evdev_soft_repeat(evdev_dev_t *evdev, uint16_t key, int32_t state) {
  * Device file interface implementation.
  */
 
-static int evdev_read(file_t *f, uio_t *uio) {
-  evdev_client_t *client = f->f_data;
+static int evdev_open(devnode_t *dev, file_t *fp, int oflags);
+static int evdev_close(devnode_t *dev, file_t *fp);
+static int evdev_read(devnode_t *dev, uio_t *uio);
+static int evdev_ioctl(devnode_t *dev, u_long cmd, void *data, int fflags);
+
+static devops_t evdev_devops = {
+  .d_type = DT_OTHER,
+  .d_open = evdev_open,
+  .d_close = evdev_close,
+  .d_read = evdev_read,
+  .d_ioctl = evdev_ioctl,
+};
+
+static int evdev_read(devnode_t *dev, uio_t *uio) {
+  evdev_client_t *client = dev->data;
   int error = 0;
 
   uio->uio_offset = 0; /* This device does not support offsets. */
@@ -381,8 +395,8 @@ static int evdev_ioctl_eviocgbit(evdev_dev_t *evdev, int type, int len,
   return 0;
 }
 
-static int evdev_ioctl(file_t *f, u_long cmd, void *data) {
-  evdev_client_t *client = f->f_data;
+static int evdev_ioctl(devnode_t *dev, u_long cmd, void *data, int fflags) {
+  evdev_client_t *client = dev->data;
   evdev_dev_t *evdev = client->ec_evdev;
 
   /* evdev fixed-length ioctls handling */
@@ -440,25 +454,17 @@ static int evdev_ioctl(file_t *f, u_long cmd, void *data) {
   return EINVAL;
 }
 
-static fileops_t evdev_fileops = {
-  .fo_read = evdev_read,
-  .fo_write = nowrite,
-  .fo_close = default_vnclose,
-  .fo_seek = noseek,
-  .fo_stat = default_vnstat,
-  .fo_ioctl = evdev_ioctl,
-};
-
-static int evdev_open(vnode_t *v, int mode, file_t *fp) {
-  evdev_dev_t *evdev = devfs_node_data(v);
-  int error = 0;
-
-  if ((error = vnode_open_generic(v, mode, fp)))
-    return error;
+static int evdev_open(devnode_t *master_dev, file_t *fp, int oflags) {
+  evdev_dev_t *evdev = master_dev->data;
 
   evdev_client_t *client = kmalloc(
     M_DEV, sizeof(evdev_client_t) + sizeof(input_event_t) * CLIENT_QUEUE_SIZE,
     M_WAITOK | M_ZERO);
+
+  devnode_t *dev = &client->ev_dev;
+  dev->data = client;
+  dev->ops = &evdev_devops;
+  refcnt_acquire(&dev->refcnt);
 
   client->ec_buffer_size = CLIENT_QUEUE_SIZE;
 
@@ -469,10 +475,9 @@ static int evdev_open(vnode_t *v, int mode, file_t *fp) {
   WITH_MTX_LOCK (&evdev->ev_lock)
     LIST_INSERT_HEAD(&evdev->ev_clients, client, ec_link);
 
-  fp->f_ops = &evdev_fileops;
-  fp->f_data = client;
+  fp->f_data = dev;
 
-  return error;
+  return 0;
 }
 
 static void evdev_dispose_client(evdev_dev_t *evdev, evdev_client_t *client) {
@@ -489,8 +494,8 @@ static void evdev_dispose_client(evdev_dev_t *evdev, evdev_client_t *client) {
   }
 }
 
-static int evdev_close(vnode_t *v, file_t *fp) {
-  evdev_client_t *client = fp->f_data;
+static int evdev_close(devnode_t *dev, file_t *fp) {
+  evdev_client_t *client = dev->data;
 
   /* Unlink and free a `evdev_client_t` structure. */
   WITH_MTX_LOCK (&client->ec_evdev->ev_lock)
@@ -502,11 +507,6 @@ static int evdev_close(vnode_t *v, file_t *fp) {
   return 0;
 }
 
-static vnodeops_t evdev_vnodeops = {
-  .v_open = evdev_open,
-  .v_close = evdev_close,
-};
-
 /* Create a devfs device for a given evdev. */
 static int evdev_dev_create(evdev_dev_t *evdev) {
   char buf[16];
@@ -516,7 +516,7 @@ static int evdev_dev_create(evdev_dev_t *evdev) {
    * FIXME Not the best solution, but will do for now. */
   do {
     snprintf(buf, sizeof(buf), "event%d", unit);
-    ret = devfs_makedev(evdev_input_dir, buf, &evdev_vnodeops, evdev, NULL);
+    ret = devfs_makedev_new(evdev_input_dir, buf, &evdev_devops, evdev, NULL);
     unit++;
   } while (ret == EEXIST);
 
