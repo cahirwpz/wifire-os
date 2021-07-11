@@ -34,7 +34,7 @@ typedef struct vfsconf vfsconf_t;
 typedef struct statvfs statvfs_t;
 
 /* VFS operations */
-typedef int vfs_mount_t(mount_t *m);
+typedef int vfs_mount_t(mount_t *m, vnode_t *vsrc);
 typedef int vfs_root_t(mount_t *m, vnode_t **vp);
 typedef int vfs_statvfs_t(mount_t *m, statvfs_t *sb);
 typedef int vfs_vget_t(mount_t *m, ino_t ino, vnode_t **vp);
@@ -78,8 +78,8 @@ typedef struct mount {
   void *mnt_data; /* Filesystem-specific arbitrary data */
 } mount_t;
 
-static inline int VFS_MOUNT(mount_t *m) {
-  return m->mnt_vfsops->vfs_mount(m);
+static inline int VFS_MOUNT(mount_t *m, vnode_t *vsrc) {
+  return m->mnt_vfsops->vfs_mount(m, vsrc);
 }
 
 static inline int VFS_ROOT(mount_t *m, vnode_t **vp) {
@@ -105,9 +105,10 @@ vfsconf_t *vfs_get_by_name(const char *name);
  * list. */
 mount_t *vfs_mount_alloc(vnode_t *v, vfsconf_t *vfc);
 
-/* Mount a new instance of the filesystem vfc at the vnode v. Does not support
- * remounting. TODO: Additional filesystem-specific arguments. */
-int vfs_domount(vfsconf_t *vfc, vnode_t *v);
+/* Mount a new instance of the filesystem vfc at the vnode vdst. Does not
+ * support remounting. Use vsrc as a source for fs data if not NULL.
+ *TODO: Additional filesystem-specific arguments. */
+int vfs_domount(vfsconf_t *vfc, vnode_t *vdst, vnode_t *vsrc);
 
 #else /* !_KERNEL */
 #include <sys/cdefs.h>

@@ -214,17 +214,19 @@ int do_fstatat(proc_t *p, int fd, char *path, stat_t *sb, int flag) {
   return error;
 }
 
-int do_mount(proc_t *p, const char *fs, const char *path) {
+int do_mount(proc_t *p, const char *source, const char *fs, const char *path) {
   vfsconf_t *vfs;
-  vnode_t *v;
+  vnode_t *vdest, *vsource = NULL;
   int error;
 
   if (!(vfs = vfs_get_by_name(fs)))
     return EINVAL;
-  if ((error = vfs_namelookup(path, &v, &p->p_cred)))
+  if ((error = vfs_namelookup(path, &vdest, &p->p_cred)))
+    return error;
+  if (source && (error = vfs_namelookup(source, &vsource, &p->p_cred)))
     return error;
 
-  return vfs_domount(vfs, v);
+  return vfs_domount(vfs, vdest, vsource);
 }
 
 int do_getdents(proc_t *p, int fd, uio_t *uio) {

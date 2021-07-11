@@ -107,7 +107,7 @@ struct sysent sysent[] = {
   [SYS_fstat] = { .nargs = 2, .call = (syscall_t *)sys_fstat },
   [SYS_sbrk] = { .nargs = 1, .call = (syscall_t *)sys_sbrk },
   [SYS_mmap] = { .nargs = 6, .call = (syscall_t *)sys_mmap },
-  [SYS_mount] = { .nargs = 2, .call = (syscall_t *)sys_mount },
+  [SYS_mount] = { .nargs = 3, .call = (syscall_t *)sys_mount },
   [SYS_getdents] = { .nargs = 3, .call = (syscall_t *)sys_getdents },
   [SYS_dup] = { .nargs = 1, .call = (syscall_t *)sys_dup },
   [SYS_dup2] = { .nargs = 2, .call = (syscall_t *)sys_dup2 },

@@ -1029,7 +1029,7 @@ static void tmpfs_update_time(tmpfs_node_t *v, tmpfs_time_type_t type) {
 
 /* tmpfs vfs operations */
 
-static int tmpfs_mount(mount_t *mp) {
+static int tmpfs_mount(mount_t *mp, vnode_t *vsrc) {
   /* Allocate the tmpfs mount structure and fill it. */
   tmpfs_mount_t *tfm = &tmpfs;
 
