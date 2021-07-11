@@ -243,7 +243,7 @@ static void pool_dtor(pool_t *pool) {
   klog("destroyed pool '%s' at %p", pool->pp_desc, pool);
 }
 
-static void pool_init(pool_t *pool, pool_init_t *args) {
+static void pool_init(pool_t *pool, pool_args_t *args) {
   const char *desc = args->desc;
   size_t size = args->size;
   size_t alignment = max(args->alignment, PI_ALIGNMENT);
@@ -278,7 +278,7 @@ void pool_add_page(pool_t *pool, void *page, size_t size) {
   add_slab(pool, page, size);
 }
 
-pool_t *_pool_create(pool_init_t *args) {
+pool_t *pool_create(pool_args_t *args) {
   pool_t *pool = kmalloc(M_POOL, sizeof(pool_t), M_ZERO | M_NOWAIT);
   pool_init(pool, args);
   return pool;

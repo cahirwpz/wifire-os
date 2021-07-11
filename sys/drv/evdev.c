@@ -64,6 +64,7 @@ typedef struct evdev_dev {
   /* Supported features: */
   bitstr_t bit_decl(ev_type_flags, EV_CNT);    /* (!) supported event types */
   bitstr_t bit_decl(ev_key_flags, KEY_CNT);    /* (!) supported key codes */
+  bitstr_t bit_decl(ev_rel_flags, REL_CNT);    /* (!) supported relative axes */
   bitstr_t bit_decl(ev_flags, EVDEV_FLAG_CNT); /* (!) supported features */
 
   /* Protects the data that is changed by incoming evdev events
@@ -555,6 +556,11 @@ void evdev_support_event(evdev_dev_t *evdev, uint16_t type) {
 void evdev_support_key(evdev_dev_t *evdev, uint16_t code) {
   assert(code < KEY_CNT);
   bit_set(evdev->ev_key_flags, code);
+}
+
+void evdev_support_rel(evdev_dev_t *evdev, uint16_t code) {
+  assert(code < REL_CNT);
+  bit_set(evdev->ev_rel_flags, code);
 }
 
 void evdev_set_flag(evdev_dev_t *evdev, uint16_t flag) {

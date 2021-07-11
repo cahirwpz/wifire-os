@@ -36,10 +36,10 @@ static const char *subsystems[] = {
   [KL_PMAP] = "pmap",       [KL_VM] = "vm",           [KL_KMEM] = "kmem",
   [KL_VMEM] = "vmem",       [KL_LOCK] = "lock",       [KL_SCHED] = "sched",
   [KL_THREAD] = "thread",   [KL_INTR] = "intr",       [KL_DEV] = "dev",
-  [KL_VFS] = "vfs",         [KL_PROC] = "proc",       [KL_SYSCALL] = "syscall",
-  [KL_USER] = "user",       [KL_TEST] = "test",       [KL_SIGNAL] = "signal",
-  [KL_FILESYS] = "filesys", [KL_TIME] = "time",       [KL_FILE] = "file",
-  [KL_TTY] = "tty",         [KL_UNDEF] = "???",
+  [KL_USB] = "usb",         [KL_VFS] = "vfs",         [KL_PROC] = "proc",
+  [KL_SYSCALL] = "syscall", [KL_USER] = "user",       [KL_TEST] = "test",
+  [KL_SIGNAL] = "signal",   [KL_FILESYS] = "filesys", [KL_TIME] = "time",
+  [KL_FILE] = "file",       [KL_TTY] = "tty",         [KL_UNDEF] = "???",
 };
 
 void init_klog(void) {
