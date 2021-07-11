@@ -94,9 +94,15 @@ quad_t qabs(quad_t);
 quad_t strtoq(const char *__restrict, char **__restrict, int);
 u_quad_t strtouq(const char *__restrict, char **__restrict, int);
 
+long long strsuftoll(const char *, const char *, long long, long long);
+long long strsuftollx(const char *, const char *, long long, long long, char *,
+                      size_t);
+
 /* The Open Group Base Specifications, Issue 6; IEEE Std 1003.1-2001 (POSIX) */
 int setenv(const char *, const char *, int);
 int unsetenv(const char *);
+
+int posix_memalign(void **, size_t, size_t);
 
 /*
  * X/Open Portability Guide >= Issue 4 Version 2

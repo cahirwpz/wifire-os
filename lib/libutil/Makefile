@@ -2,7 +2,8 @@
 
 TOPDIR = $(realpath ../..)
 
-SOURCES = efun.c login_tty.c logwtmp.c parsedate.y pty.c strpct.c
+SOURCES = efun.c login_tty.c logwtmp.c parsedate.y pty.c strpct.c \
+	  raise_default_signal.c
 FORMAT-EXCLUDE = %.c
 
 include $(TOPDIR)/build/build.lib.mk

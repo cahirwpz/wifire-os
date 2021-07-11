@@ -33,6 +33,8 @@ int easprintf(char **__restrict, const char *__restrict, ...)
   __printflike(2, 3);
 int evasprintf(char **__restrict, const char *__restrict, __va_list)
   __printflike(2, 0);
+
+int raise_default_signal(int sig);
 __END_DECLS
 
 #endif /* !_UTIL_H_ */
