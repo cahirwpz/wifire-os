@@ -40,9 +40,6 @@ typedef struct atkbdc_state {
   int evdev_state;
 } atkbdc_state_t;
 
-/* For now, this is the only keyboard driver we'll want to have, so the
-   interface is not very flexible. */
-
 /* NOTE: These blocking wait helper functions can't use an interrupt, as the
    PS/2 controller does not generate interrupts for these events. However, this
    is not a major problem, since pretty much always the controller is
@@ -173,7 +170,7 @@ static void evdev_init(atkbdc_state_t *atkbdc) {
   /* Key repetition are also supported. */
   evdev_support_event(evdev, EV_REP);
   /* Mark all AT-compatible keys as supported. */
-  evdev_support_all_known_keys(evdev);
+  evdev_atkbd_support_all_known_keys(evdev);
 
   /* Bind evdev to atkbdc state for future references. */
   atkbdc->evdev = evdev;

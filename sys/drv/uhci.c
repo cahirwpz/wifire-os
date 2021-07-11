@@ -51,11 +51,17 @@ typedef struct uhci_state {
  * - `P_DATA` - memory buffers for I/O data to transfer.
  */
 
-#define UHCI_TFR_BUF_SIZE 128
-#define UHCI_TFR_POOL_SIZE PAGESIZE
+#define UHCI_DATA_BUF_SIZE 512
 
-#define UHCI_DATA_BUF_SIZE (2 * UHCI_TD_MAXLEN)
-#define UHCI_DATA_POOL_SIZE (64 * PAGESIZE)
+#define UHCI_UNIT_SIZE max(sizeof(uhci_qh_t), sizeof(uhci_td_t))
+#define UHCI_TFR_BUF_SIZE                                                      \
+  (UHCI_DATA_BUF_SIZE / USB_MAX_IPACKET * UHCI_UNIT_SIZE)
+
+#define UHCI_MAX_NREQS 16 /* maximum number of scheduled request */
+
+#define UHCI_DATA_POOL_SIZE (UHCI_MAX_NREQS * UHCI_DATA_BUF_SIZE)
+
+#define UHCI_TFR_POOL_SIZE (UHCI_MAX_NREQS * UHCI_TFR_BUF_SIZE)
 
 #define UHCI_ALIGNMENT max(UHCI_TD_ALIGN, UHCI_QH_ALIGN)
 

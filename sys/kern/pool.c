@@ -257,7 +257,8 @@ static void pool_init(pool_t *pool, pool_init_t *args) {
 #if KASAN
   /* the alignment is within the redzone */
   pool->pp_itemsize = size;
-  pool->pp_redzone = align(size + KASAN_POOL_REDZONE_SIZE, alignment) - size;
+  pool->pp_redzone =
+    align(size, alignment) - size + align(KASAN_POOL_REDZONE_SIZE, alignment);
 #else /* !KASAN */
   /* no redzone, we have to align the size itself */
   pool->pp_itemsize = align(size, alignment);
